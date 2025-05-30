@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页工具箱</title>
+    <link rel="stylesheet" href="popup-simple.css">
+</head>
+<body>
+    <div class="popup-container">
+        <!-- 头部 -->
+        <header class="popup-header">
+            <div class="logo">
+                <span class="logo-icon">🔧</span>
+                <h1 class="logo-text">网页工具箱</h1>
+            </div>
+            <button class="settings-btn" id="settingsBtn" title="设置">⚙️</button>
+        </header>
+
+        <!-- 主要功能区域 -->
+        <main class="popup-main">
+            <!-- 复制限制解除 -->
+            <section class="feature-section">
+                <div class="feature-header">
+                    <span class="feature-icon">📋</span>
+                    <h2 class="feature-title">复制自由</h2>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="copyFreedomToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="feature-actions">
+                    <button class="action-btn" id="enableTextSelection">
+                        <span class="btn-icon">✂️</span>
+                        解除限制
+                    </button>
+                    <button class="action-btn" id="restoreRightClick">
+                        <span class="btn-icon">🖱️</span>
+                        恢复右键
+                    </button>
+                </div>
+            </section>
+
+            <!-- 链接管理 -->
+            <section class="feature-section">
+                <div class="feature-header">
+                    <span class="feature-icon">🔗</span>
+                    <h2 class="feature-title">链接管理</h2>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="linkManagerToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="feature-actions">
+                    <button class="action-btn" id="newTabMode">
+                        <span class="btn-icon">🆕</span>
+                        新标签页
+                    </button>
+                    <button class="action-btn" id="previewMode">
+                        <span class="btn-icon">👁️</span>
+                        预览模式
+                    </button>
+                </div>
+            </section>
+
+            <!-- 媒体提取 -->
+            <section class="feature-section">
+                <div class="feature-header">
+                    <span class="feature-icon">🎬</span>
+                    <h2 class="feature-title">媒体提取</h2>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="mediaExtractorToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="feature-actions">
+                    <button class="action-btn" id="extractImages">
+                        <span class="btn-icon">🖼️</span>
+                        提取图片
+                    </button>
+                    <button class="action-btn" id="extractVideos">
+                        <span class="btn-icon">🎥</span>
+                        检测视频
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- 页面信息 -->
+        <footer class="popup-footer">
+            <div class="page-info">
+                <div class="info-item">
+                    <span class="info-label">页面:</span>
+                    <span class="info-value" id="currentDomain">加载中...</span>
+                </div>
+                <div class="info-stats">
+                    <span class="stat-item">
+                        <span class="stat-icon">🖼️</span>
+                        <span id="imageCount">0</span>
+                    </span>
+                    <span class="stat-item">
+                        <span class="stat-icon">🔗</span>
+                        <span id="linkCount">0</span>
+                    </span>
+                    <span class="stat-item">
+                        <span class="stat-icon">🎥</span>
+                        <span id="videoCount">0</span>
+                    </span>
+                </div>
+            </div>
+            <div class="footer-actions">
+                <button class="footer-btn" id="openSidePanel">
+                    <span class="btn-icon">📋</span>
+                    面板
+                </button>
+                <button class="footer-btn" id="refreshPage">
+                    <span class="btn-icon">🔄</span>
+                    刷新
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html> 

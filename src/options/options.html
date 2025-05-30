@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元气助手 - 设置</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="options-container">
+        <!-- 头部 -->
+        <header class="options-header">
+            <div class="header-content">
+                <h1 class="page-title">
+                    <span class="title-icon">🔧</span>
+                    元气助手设置
+                </h1>
+                <p class="page-desc">配置您的网页工具偏好设置，让浏览体验更加便捷。</p>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn secondary" id="resetBtn">重置默认</button>
+                <button class="action-btn primary" id="saveBtn">保存设置</button>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="options-main">
+            <!-- 导航菜单 -->
+            <nav class="options-nav">
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <button class="nav-btn active" data-section="general">
+                            <span class="nav-icon">⚙️</span>
+                            通用设置
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-btn" data-section="copy-freedom">
+                            <span class="nav-icon">📋</span>
+                            复制自由
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-btn" data-section="link-manager">
+                            <span class="nav-icon">🔗</span>
+                            链接管理
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-btn" data-section="media-extractor">
+                            <span class="nav-icon">🎬</span>
+                            媒体提取
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-btn" data-section="shortcuts">
+                            <span class="nav-icon">⌨️</span>
+                            快捷键
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-btn" data-section="whitelist">
+                            <span class="nav-icon">📝</span>
+                            白名单
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-btn" data-section="backup">
+                            <span class="nav-icon">💾</span>
+                            备份/恢复
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- 设置内容 -->
+            <div class="options-content">
+                <!-- 通用设置 -->
+                <section class="settings-section active" id="general-section">
+                    <div class="section-header">
+                        <h2 class="section-title">通用设置</h2>
+                        <p class="section-desc">配置扩展的基本行为和外观</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">基本功能</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">启用扩展</label>
+                                <p class="setting-desc">控制是否启用元气助手的所有功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="extensionEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">自动检测</label>
+                                <p class="setting-desc">页面加载时自动检测和应用相关功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoDetect" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">显示通知</label>
+                                <p class="setting-desc">操作成功或失败时显示桌面通知</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="showNotifications" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">界面设置</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">主题模式</label>
+                                <p class="setting-desc">选择界面的主题颜色</p>
+                            </div>
+                            <div class="setting-control">
+                                <select class="select-input" id="themeMode">
+                                    <option value="auto">跟随系统</option>
+                                    <option value="light">浅色模式</option>
+                                    <option value="dark">深色模式</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">侧边栏位置</label>
+                                <p class="setting-desc">设置侧边栏的显示位置</p>
+                            </div>
+                            <div class="setting-control">
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" name="sidebarPosition" value="left" checked>
+                                        <span class="radio-indicator"></span>
+                                        左侧
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="sidebarPosition" value="right">
+                                        <span class="radio-indicator"></span>
+                                        右侧
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 复制自由设置 -->
+                <section class="settings-section" id="copy-freedom-section">
+                    <div class="section-header">
+                        <h2 class="section-title">复制自由设置</h2>
+                        <p class="section-desc">解除网页的复制限制，让您自由地选择和复制内容</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">功能开关</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">启用复制自由</label>
+                                <p class="setting-desc">启用所有复制限制解除功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="copyFreedomEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">文本选择</label>
+                                <p class="setting-desc">解除网页禁止选择文本的限制</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="textSelectionEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">右键菜单</label>
+                                <p class="setting-desc">恢复被禁用的右键上下文菜单</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="rightClickEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">键盘快捷键</label>
+                                <p class="setting-desc">恢复复制、粘贴等键盘快捷键</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="keyboardShortcutsEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">高级选项</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">强制解除模式</label>
+                                <p class="setting-desc">使用更强力的方法解除限制（可能影响网页功能）</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="forceCopyMode">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">自动应用</label>
+                                <p class="setting-desc">页面加载时自动应用复制自由功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoApplyCopyFreedom" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 链接管理设置 -->
+                <section class="settings-section" id="link-manager-section">
+                    <div class="section-header">
+                        <h2 class="section-title">链接管理设置</h2>
+                        <p class="section-desc">控制链接的打开方式和预览功能</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">链接行为</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">启用链接管理</label>
+                                <p class="setting-desc">启用链接管理功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="linkManagerEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">新标签页打开外部链接</label>
+                                <p class="setting-desc">外部链接自动在新标签页中打开</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="newTabForExternal" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">链接预览</label>
+                                <p class="setting-desc">悬停时显示链接内容预览</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="linkPreviewEnabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">预览设置</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">预览延迟</label>
+                                <p class="setting-desc">悬停多久后显示预览（毫秒）</p>
+                            </div>
+                            <div class="setting-control">
+                                <input type="range" class="range-input" id="previewDelay" 
+                                       min="100" max="2000" step="100" value="500">
+                                <span class="range-value">500ms</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">预览窗口大小</label>
+                                <p class="setting-desc">设置预览窗口的尺寸</p>
+                            </div>
+                            <div class="setting-control">
+                                <select class="select-input" id="previewSize">
+                                    <option value="small">小（300x200）</option>
+                                    <option value="medium" selected>中（400x300）</option>
+                                    <option value="large">大（500x400）</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 媒体提取设置 -->
+                <section class="settings-section" id="media-extractor-section">
+                    <div class="section-header">
+                        <h2 class="section-title">媒体提取设置</h2>
+                        <p class="section-desc">配置媒体文件的检测和提取功能</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">提取功能</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">启用媒体提取</label>
+                                <p class="setting-desc">启用媒体文件提取功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="mediaExtractorEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">自动检测图片</label>
+                                <p class="setting-desc">页面加载时自动检测图片</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoDetectImages" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">自动检测视频</label>
+                                <p class="setting-desc">页面加载时自动检测视频</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoDetectVideos">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">自动检测音频</label>
+                                <p class="setting-desc">页面加载时自动检测音频</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoDetectAudio">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">过滤设置</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">最小图片尺寸</label>
+                                <p class="setting-desc">只提取大于此尺寸的图片（像素）</p>
+                            </div>
+                            <div class="setting-control">
+                                <input type="number" class="number-input" id="minImageSize" 
+                                       min="0" max="1000" value="50" placeholder="50">
+                                <span class="input-suffix">px</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">支持的图片格式</label>
+                                <p class="setting-desc">选择要提取的图片格式</p>
+                            </div>
+                            <div class="setting-control">
+                                <div class="checkbox-group">
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" checked> JPG/JPEG
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" checked> PNG
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" checked> GIF
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox"> WebP
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox"> SVG
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 快捷键设置 -->
+                <section class="settings-section" id="shortcuts-section">
+                    <div class="section-header">
+                        <h2 class="section-title">快捷键设置</h2>
+                        <p class="section-desc">自定义键盘快捷键</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">全局快捷键</h3>
+                        <div class="shortcut-item">
+                            <div class="shortcut-info">
+                                <label class="shortcut-label">打开侧边栏</label>
+                                <p class="shortcut-desc">快速打开/关闭侧边栏面板</p>
+                            </div>
+                            <div class="shortcut-control">
+                                <input type="text" class="shortcut-input" readonly 
+                                       placeholder="点击设置快捷键" data-action="toggle-sidebar">
+                                <button class="shortcut-btn">设置</button>
+                            </div>
+                        </div>
+
+                        <div class="shortcut-item">
+                            <div class="shortcut-info">
+                                <label class="shortcut-label">启用复制自由</label>
+                                <p class="shortcut-desc">快速启用/禁用复制限制解除</p>
+                            </div>
+                            <div class="shortcut-control">
+                                <input type="text" class="shortcut-input" readonly 
+                                       placeholder="点击设置快捷键" data-action="toggle-copy-freedom">
+                                <button class="shortcut-btn">设置</button>
+                            </div>
+                        </div>
+
+                        <div class="shortcut-item">
+                            <div class="shortcut-info">
+                                <label class="shortcut-label">提取页面图片</label>
+                                <p class="shortcut-desc">快速提取当前页面的所有图片</p>
+                            </div>
+                            <div class="shortcut-control">
+                                <input type="text" class="shortcut-input" readonly 
+                                       placeholder="点击设置快捷键" data-action="extract-images">
+                                <button class="shortcut-btn">设置</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 白名单设置 -->
+                <section class="settings-section" id="whitelist-section">
+                    <div class="section-header">
+                        <h2 class="section-title">白名单设置</h2>
+                        <p class="section-desc">配置不应用功能的网站列表</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">网站白名单</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label class="setting-label">启用白名单</label>
+                                <p class="setting-desc">在白名单中的网站不会应用任何功能</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableWhitelist">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="whitelist-manager">
+                            <div class="add-site">
+                                <input type="text" class="text-input" id="newSiteInput" 
+                                       placeholder="输入域名，如：example.com">
+                                <button class="action-btn primary" id="addSiteBtn">添加</button>
+                            </div>
+                            
+                            <div class="site-list" id="whitelistSites">
+                                <div class="empty-state">
+                                    <p>暂无白名单网站</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 备份恢复设置 -->
+                <section class="settings-section" id="backup-section">
+                    <div class="section-header">
+                        <h2 class="section-title">备份与恢复</h2>
+                        <p class="section-desc">备份您的设置，或从备份文件恢复</p>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">数据备份</h3>
+                        <div class="backup-actions">
+                            <div class="backup-item">
+                                <div class="backup-info">
+                                    <h4 class="backup-title">导出设置</h4>
+                                    <p class="backup-desc">将当前设置导出为JSON文件</p>
+                                </div>
+                                <button class="action-btn secondary" id="exportSettingsBtn">
+                                    <span class="btn-icon">📤</span>
+                                    导出设置
+                                </button>
+                            </div>
+
+                            <div class="backup-item">
+                                <div class="backup-info">
+                                    <h4 class="backup-title">导入设置</h4>
+                                    <p class="backup-desc">从JSON文件恢复设置</p>
+                                </div>
+                                <button class="action-btn secondary" id="importSettingsBtn">
+                                    <span class="btn-icon">📥</span>
+                                    导入设置
+                                </button>
+                            </div>
+
+                            <div class="backup-item">
+                                <div class="backup-info">
+                                    <h4 class="backup-title">重置设置</h4>
+                                    <p class="backup-desc">恢复到默认设置（不可撤销）</p>
+                                </div>
+                                <button class="action-btn danger" id="resetAllSettingsBtn">
+                                    <span class="btn-icon">🔄</span>
+                                    重置所有设置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 class="group-title">使用统计</h3>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalUsageTime">0</div>
+                                <div class="stat-label">使用时长（小时）</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="copyOperations">0</div>
+                                <div class="stat-label">复制操作次数</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="mediaExtracted">0</div>
+                                <div class="stat-label">媒体提取次数</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="linksProcessed">0</div>
+                                <div class="stat-label">链接处理次数</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="options-footer">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <p class="version-info">元气助手 v1.0.0</p>
+                    <p class="copyright">© 2024 元气助手项目组</p>
+                </div>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">用户指南</a>
+                    <a href="#" class="footer-link">问题反馈</a>
+                    <a href="#" class="footer-link">隐私政策</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 状态消息 -->
+    <div class="toast" id="toast">
+        <div class="toast-content">
+            <span class="toast-icon">✓</span>
+            <span class="toast-message">设置已保存</span>
+        </div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html> 

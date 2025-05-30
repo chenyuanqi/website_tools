@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页工具箱 - 安装验证</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .check-item {
+            background: white;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .check-icon {
+            font-size: 24px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .check-content {
+            flex: 1;
+        }
+        
+        .check-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .check-desc {
+            font-size: 14px;
+            color: #666;
+            margin: 0;
+        }
+        
+        .check-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-pending {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .instructions {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        
+        .step {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .action-buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 网页工具箱安装验证</h1>
+        <p>快速检查您的Chrome扩展是否正确安装和配置</p>
+    </div>
+
+    <div class="instructions">
+        <h3>📋 安装步骤（如果还未安装）：</h3>
+        <div class="step">1. 打开Chrome浏览器，输入 <code>chrome://extensions/</code></div>
+        <div class="step">2. 启用右上角的"开发者模式"开关</div>
+        <div class="step">3. 点击"加载已解压的扩展程序"</div>
+        <div class="step">4. 选择项目文件夹：<code>/Users/mac/Code/Mine/website_tools</code></div>
+        <div class="step">5. 确认加载，然后刷新此页面进行验证</div>
+    </div>
+
+    <div id="checkResults">
+        <!-- 检查项将通过JavaScript动态添加 -->
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn" onclick="runAllChecks()">🔄 重新检查</button>
+        <a href="test-page.html" class="btn btn-secondary">🧪 打开测试页面</a>
+        <a href="chrome://extensions/" class="btn btn-secondary" target="_blank">⚙️ 扩展管理</a>
+    </div>
+
+    <script>
+        const checks = [
+            {
+                id: 'content-script',
+                icon: '📄',
+                title: '内容脚本注入',
+                desc: '检查内容脚本是否已正确注入到页面',
+                check: () => {
+                    return new Promise((resolve) => {
+                        if (window.websiteToolsInjected) {
+                            resolve({ success: true, message: '内容脚本已注入' });
+                        } else {
+                            setTimeout(() => {
+                                if (window.websiteToolsInjected) {
+                                    resolve({ success: true, message: '内容脚本已注入（延迟检测）' });
+                                } else {
+                                    resolve({ success: false, message: '内容脚本未检测到' });
+                                }
+                            }, 2000);
+                        }
+                    });
+                }
+            },
+            {
+                id: 'extension-api',
+                icon: '🔗',
+                title: '扩展API可用性',
+                desc: '检查Chrome扩展API是否可访问',
+                check: () => {
+                    return new Promise((resolve) => {
+                        if (typeof chrome !== 'undefined' && chrome.runtime) {
+                            resolve({ success: true, message: 'Chrome扩展API可用' });
+                        } else {
+                            resolve({ success: false, message: 'Chrome扩展API不可用' });
+                        }
+                    });
+                }
+            },
+            {
+                id: 'storage-access',
+                icon: '💾',
+                title: '存储权限',
+                desc: '检查扩展存储API是否正常工作',
+                check: () => {
+                    return new Promise((resolve) => {
+                        if (typeof chrome !== 'undefined' && chrome.storage) {
+                            // 尝试读取存储
+                            chrome.storage.sync.get(['test'], () => {
+                                if (chrome.runtime.lastError) {
+                                    resolve({ success: false, message: '存储权限不足: ' + chrome.runtime.lastError.message });
+                                } else {
+                                    resolve({ success: true, message: '存储权限正常' });
+                                }
+                            });
+                        } else {
+                            resolve({ success: false, message: '存储API不可用' });
+                        }
+                    });
+                }
+            },
+            {
+                id: 'page-content',
+                icon: '📊',
+                title: '页面内容检测',
+                desc: '检查是否能正确检测页面元素',
+                check: () => {
+                    return new Promise((resolve) => {
+                        const images = document.querySelectorAll('img').length;
+                        const links = document.querySelectorAll('a').length;
+                        const text = document.body.textContent.length;
+                        
+                        if (images >= 0 && links >= 0 && text > 0) {
+                            resolve({ 
+                                success: true, 
+                                message: `检测到 ${images} 张图片, ${links} 个链接, ${text} 个字符` 
+                            });
+                        } else {
+                            resolve({ success: false, message: '页面内容检测异常' });
+                        }
+                    });
+                }
+            },
+            {
+                id: 'settings-check',
+                icon: '⚙️',
+                title: '设置系统',
+                desc: '检查扩展设置是否能正常加载和保存',
+                check: () => {
+                    return new Promise((resolve) => {
+                        if (typeof chrome !== 'undefined' && chrome.storage) {
+                            chrome.storage.sync.get(['websiteToolsSettings'], (result) => {
+                                if (chrome.runtime.lastError) {
+                                    resolve({ success: false, message: '设置加载失败' });
+                                } else {
+                                    const hasSettings = result.websiteToolsSettings != null;
+                                    resolve({ 
+                                        success: true, 
+                                        message: hasSettings ? '设置已配置' : '使用默认设置' 
+                                    });
+                                }
+                            });
+                        } else {
+                            resolve({ success: false, message: '无法访问设置' });
+                        }
+                    });
+                }
+            }
+        ];
+
+        async function runAllChecks() {
+            const resultsContainer = document.getElementById('checkResults');
+            resultsContainer.innerHTML = '';
+
+            for (const checkItem of checks) {
+                // 创建检查项元素
+                const itemEl = document.createElement('div');
+                itemEl.className = 'check-item';
+                itemEl.innerHTML = `
+                    <div class="check-icon">${checkItem.icon}</div>
+                    <div class="check-content">
+                        <div class="check-title">${checkItem.title}</div>
+                        <div class="check-desc">${checkItem.desc}</div>
+                    </div>
+                    <div class="check-status status-pending">检查中...</div>
+                `;
+                resultsContainer.appendChild(itemEl);
+
+                const statusEl = itemEl.querySelector('.check-status');
+
+                try {
+                    const result = await checkItem.check();
+                    statusEl.textContent = result.message;
+                    statusEl.className = `check-status ${result.success ? 'status-success' : 'status-error'}`;
+                } catch (error) {
+                    statusEl.textContent = '检查失败: ' + error.message;
+                    statusEl.className = 'check-status status-error';
+                }
+            }
+
+            // 生成总结
+            const allItems = document.querySelectorAll('.check-status');
+            const successCount = document.querySelectorAll('.status-success').length;
+            const totalCount = allItems.length;
+
+            let summaryEl = document.getElementById('summary');
+            if (!summaryEl) {
+                summaryEl = document.createElement('div');
+                summaryEl.id = 'summary';
+                summaryEl.className = 'instructions';
+                resultsContainer.appendChild(summaryEl);
+            }
+
+            if (successCount === totalCount) {
+                summaryEl.innerHTML = `
+                    <h3>✅ 安装验证成功！</h3>
+                    <p>所有检查项都通过了，您的网页工具箱扩展已正确安装并可以正常使用。</p>
+                    <p><strong>下一步：</strong> 点击下方的"打开测试页面"按钮进行功能测试。</p>
+                `;
+            } else {
+                summaryEl.innerHTML = `
+                    <h3>⚠️ 检测到问题</h3>
+                    <p>通过了 ${successCount}/${totalCount} 项检查。请检查失败的项目并尝试重新安装扩展。</p>
+                    <p><strong>建议：</strong></p>
+                    <ul>
+                        <li>确保已启用开发者模式</li>
+                        <li>检查manifest.json文件是否正确</li>
+                        <li>尝试重新加载扩展</li>
+                        <li>刷新当前页面</li>
+                    </ul>
+                `;
+            }
+        }
+
+        // 页面加载完成后自动运行检查
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('安装验证页面已加载');
+            setTimeout(runAllChecks, 1000); // 延迟1秒等待扩展加载
+        });
+    </script>
+</body>
+</html> 

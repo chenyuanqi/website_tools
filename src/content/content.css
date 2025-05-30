@@ -1,0 +1,273 @@
+/* 网页工具扩展内容脚本样式 */
+
+/* 确保文本可以被选择 */
+.website-tools-text-selectable,
+.website-tools-text-selectable * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+}
+
+/* 预览弹框样式 */
+.website-tools-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.website-tools-preview-content {
+    background: white;
+    border-radius: 8px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.website-tools-preview-header {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e1e5e9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.website-tools-preview-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 400px;
+}
+
+.website-tools-preview-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: #666;
+}
+
+.website-tools-preview-close:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.website-tools-preview-iframe {
+    width: 800px;
+    height: 600px;
+    border: none;
+    display: block;
+}
+
+/* 媒体提取高亮样式 */
+.website-tools-media-highlight {
+    outline: 2px solid #4285f4 !important;
+    outline-offset: 2px !important;
+    position: relative;
+}
+
+.website-tools-media-highlight::after {
+    content: '🔍';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #4285f4;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    z-index: 1000;
+}
+
+/* 链接处理指示器 */
+.website-tools-link-processed {
+    position: relative;
+}
+
+.website-tools-link-processed::before {
+    content: '🔗';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* 通知样式 */
+.website-tools-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 999999;
+    max-width: 300px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.website-tools-notification.success {
+    border-left: 4px solid #10b981;
+}
+
+.website-tools-notification.error {
+    border-left: 4px solid #ef4444;
+}
+
+.website-tools-notification.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.website-tools-notification-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.website-tools-notification-message {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 工具提示样式 */
+.website-tools-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 999999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.website-tools-tooltip.show {
+    opacity: 1;
+}
+
+/* 加载指示器 */
+.website-tools-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #4285f4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 确保样式不被网站覆盖 */
+.website-tools-preview-modal,
+.website-tools-notification,
+.website-tools-tooltip {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    box-sizing: border-box !important;
+}
+
+/* 隐藏类 */
+.website-tools-hidden {
+    display: none !important;
+}
+
+/* 可见性切换 */
+.website-tools-invisible {
+    visibility: hidden !important;
+}
+
+/* 禁用指针事件 */
+.website-tools-no-pointer {
+    pointer-events: none !important;
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    .website-tools-preview-modal {
+        background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .website-tools-notification {
+        border-width: 2px;
+    }
+    
+    .website-tools-media-highlight {
+        outline-width: 3px !important;
+    }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+    .website-tools-preview-modal,
+    .website-tools-notification,
+    .website-tools-tooltip,
+    .website-tools-loading {
+        animation: none !important;
+        transition: none !important;
+    }
+} 

@@ -1,0 +1,40 @@
+{
+  "name": "website-tools-extension",
+  "version": "1.0.0",
+  "description": "一款功能强大的Chrome浏览器扩展，聚合日常网页浏览中最常用的实用工具",
+  "main": "src/background/service-worker.js",
+  "scripts": {
+    "build": "echo '构建扩展包'",
+    "dev": "echo '开发模式'",
+    "test": "echo '运行测试'",
+    "lint": "echo '代码检查'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "browser-tools",
+    "web-utilities",
+    "link-manager",
+    "copy-freedom",
+    "media-extractor"
+  ],
+  "author": "网页工具开发团队",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/website-tools-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/website-tools-extension/issues"
+  },
+  "homepage": "https://github.com/your-username/website-tools-extension#readme",
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "Chrome >= 88"
+  ]
+} 
