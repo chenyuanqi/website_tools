@@ -3,6 +3,40 @@
  * 负责初始化所有功能模块并协调它们的工作
  */
 
+console.log('[网页工具] Content Script 加载完成');
+
+/**
+ * DOM 工具类
+ */
+class DOMUtils {
+  /**
+   * 添加CSS样式
+   */
+  static addCSS(css, id) {
+    // 移除已存在的样式
+    const existingStyle = document.getElementById(id);
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    // 创建新的样式元素
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+  
+  /**
+   * 移除CSS样式
+   */
+  static removeCSS(id) {
+    const style = document.getElementById(id);
+    if (style) {
+      style.remove();
+    }
+  }
+}
+
 (function() {
   'use strict';
   
@@ -49,8 +83,7 @@
     
     // 通用消息
     GET_PAGE_INFO: 'getPageInfo',
-    SHOW_NOTIFICATION: 'showNotification',
-    EXTRACT_LINKS: 'extractLinks'
+    SHOW_NOTIFICATION: 'showNotification'
   };
 
   const DEFAULT_SETTINGS = {
@@ -267,6 +300,28 @@
             
           case MESSAGE_TYPES.ENABLE_TEXT_SELECTION:
             this.toggleModule(MODULES.COPY_FREEDOM, 'textSelection', data.enabled);
+            sendResponse({ success: true });
+            break;
+            
+          case MESSAGE_TYPES.RESTORE_RIGHT_CLICK:
+            this.toggleModule(MODULES.COPY_FREEDOM, 'rightClickMenu', data.enabled);
+            sendResponse({ success: true });
+            break;
+            
+          case MESSAGE_TYPES.RESTORE_SHORTCUTS:
+            this.toggleModule(MODULES.COPY_FREEDOM, 'keyboardShortcuts', data.enabled);
+            sendResponse({ success: true });
+            break;
+            
+          case MESSAGE_TYPES.ENABLE_NEW_TAB_MODE:
+          case 'ENABLE_NEW_TAB_MODE':
+            this.toggleModule(MODULES.LINK_MANAGER, 'newTabForExternal', data.enabled);
+            sendResponse({ success: true });
+            break;
+            
+          case MESSAGE_TYPES.ENABLE_PREVIEW_MODE:
+          case 'ENABLE_PREVIEW_MODE':
+            this.toggleModule(MODULES.LINK_MANAGER, 'popupPreview', data.enabled);
             sendResponse({ success: true });
             break;
             
@@ -507,22 +562,26 @@
     }
     
     /**
-     * 设置链接处理模式（互斥功能）
+     * 设置链接处理模式（支持同时启用多个功能）
      */
     setupLinkMode() {
       // 清理之前的模式
       this.clearLinkMode();
       
-      // 确定当前模式（优先级：新标签页 > 预览）
+      // 设置当前模式（可以同时启用多个功能）
+      const modes = [];
+      
       if (this.settings.newTabForExternal) {
-        this.currentMode = 'newTab';
+        modes.push('newTab');
         this.enableNewTabMode();
-      } else if (this.settings.popupPreview) {
-        this.currentMode = 'preview';
-        this.enablePreviewMode();
-      } else {
-        this.currentMode = 'none';
       }
+      
+      if (this.settings.popupPreview) {
+        modes.push('preview');
+        this.enablePreviewMode();
+      }
+      
+      this.currentMode = modes.length > 0 ? modes.join('+') : 'none';
       
       Logger.log(`链接管理模式已设置为: ${this.currentMode}`);
     }
@@ -563,12 +622,10 @@
      * 启用新标签页模式
      */
     enableNewTabMode() {
-      const currentDomain = window.location.hostname;
-      
-      // 标记外部链接并添加样式
+      // 标记外部链接并添加新标签页样式
       this.markExternalLinks();
       
-      // 添加新标签页样式
+      // 添加外部链接样式
       const css = `
         .website-tools-external-link {
           position: relative;
@@ -576,37 +633,64 @@
         .website-tools-external-link::after {
           content: "↗";
           font-size: 0.8em;
-          color: #666;
-          margin-left: 2px;
-          opacity: 0.7;
+          color: #007bff;
+          margin-left: 3px;
+          opacity: 0.8;
         }
         .website-tools-external-link:hover::after {
           opacity: 1;
-          color: #007bff;
+          color: #0056b3;
         }
       `;
       DOMUtils.addCSS(css, 'website-tools-external-links');
       
       // 创建点击事件处理器
       this.linkClickHandler = (e) => {
-        if (!e.target || typeof e.target.closest !== 'function') return;
-        
         const link = e.target.closest('a[href]');
-        if (!link || !link.href) return;
+        if (!link || !link.classList.contains('website-tools-external-link')) return;
         
-        // 检查是否为已标记的外部链接
-        if (link.classList.contains('website-tools-external-link')) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // 在新标签页打开
-          window.open(link.href, '_blank', 'noopener,noreferrer');
-          Logger.log('外部链接已在新标签页打开:', link.href);
-        }
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // 在新标签页打开
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+        Logger.log('外部链接在新标签页打开:', link.href);
       };
       
+      // 添加事件监听器
       document.addEventListener('click', this.linkClickHandler, true);
+      
       Logger.log('新标签页模式已启用');
+    }
+    
+    /**
+     * 标记外部链接
+     */
+    markExternalLinks() {
+      const currentDomain = window.location.hostname;
+      const links = document.querySelectorAll('a[href]');
+      
+      links.forEach((link, index) => {
+        try {
+          const url = new URL(link.href, window.location.href);
+          const isExternal = url.hostname !== currentDomain;
+          
+          if (isExternal) {
+            link.classList.add('website-tools-external-link');
+            link.setAttribute('data-website-tools-processed', 'external');
+            link.setAttribute('title', `外部链接: ${link.href}`);
+            
+            // 记录处理过的链接
+            const selector = `a[href="${link.href}"]`;
+            this.processedLinks.add(selector);
+          }
+        } catch (e) {
+          // 忽略无效链接
+        }
+      });
+      
+      Logger.log(`已标记 ${this.processedLinks.size} 个外部链接`);
     }
     
     /**
@@ -676,35 +760,6 @@
     }
     
     /**
-     * 标记外部链接
-     */
-    markExternalLinks() {
-      const currentDomain = window.location.hostname;
-      const links = document.querySelectorAll('a[href]');
-      
-      links.forEach((link, index) => {
-        try {
-          const url = new URL(link.href, window.location.href);
-          const isExternal = url.hostname !== currentDomain;
-          
-          if (isExternal) {
-            link.classList.add('website-tools-external-link');
-            link.setAttribute('data-website-tools-processed', 'external');
-            link.setAttribute('title', `外部链接: ${link.href}`);
-            
-            // 记录处理过的链接
-            const selector = `a[href="${link.href}"]`;
-            this.processedLinks.add(selector);
-          }
-        } catch (e) {
-          // 忽略无效链接
-        }
-      });
-      
-      Logger.log(`已标记 ${this.processedLinks.size} 个外部链接`);
-    }
-    
-    /**
      * 标记所有链接（用于预览模式）
      */
     markAllLinks() {
@@ -728,51 +783,36 @@
      * 显示链接预览
      */
     showLinkPreview(link, event) {
-      // 移除现有预览
+      // 移除已存在的预览
       this.hideLinkPreview();
       
-      // 创建预览元素
       const preview = document.createElement('div');
       preview.className = 'website-tools-link-preview';
-      
-      // 构建预览内容
-      const url = new URL(link.href, window.location.href);
-      const isExternal = url.hostname !== window.location.hostname;
-      
       preview.innerHTML = `
-        <div style="font-weight: bold; margin-bottom: 4px;">
-          ${isExternal ? '🔗 外部链接' : '🏠 内部链接'}
-        </div>
-        <div style="font-size: 11px; opacity: 0.9;">
-          ${link.href}
-        </div>
-        ${link.title ? `<div style="font-size: 10px; opacity: 0.7; margin-top: 4px;">${link.title}</div>` : ''}
+        <div><strong>链接:</strong> ${link.href}</div>
+        <div><strong>类型:</strong> ${link.classList.contains('website-tools-external-link') ? '外部链接' : '内部链接'}</div>
+        ${link.title ? `<div><strong>标题:</strong> ${link.title}</div>` : ''}
       `;
       
       document.body.appendChild(preview);
       
       // 定位预览框
       const rect = link.getBoundingClientRect();
+      preview.style.left = `${rect.left + window.scrollX}px`;
+      preview.style.top = `${rect.bottom + window.scrollY + 5}px`;
+      
+      // 检查是否超出屏幕右边界
       const previewRect = preview.getBoundingClientRect();
-      
-      let left = rect.left;
-      let top = rect.bottom + 8;
-      
-      // 防止预览框超出视窗
-      if (left + previewRect.width > window.innerWidth) {
-        left = window.innerWidth - previewRect.width - 10;
-      }
-      if (top + previewRect.height > window.innerHeight) {
-        top = rect.top - previewRect.height - 8;
+      if (previewRect.right > window.innerWidth) {
+        preview.style.left = `${window.innerWidth - previewRect.width - 10}px`;
       }
       
-      preview.style.left = left + 'px';
-      preview.style.top = top + 'px';
+      // 显示预览
+      requestAnimationFrame(() => {
+        preview.classList.add('show');
+      });
       
-      // 显示动画
-      setTimeout(() => preview.classList.add('show'), 10);
-      
-      // 存储引用以便清理
+      // 保存引用
       link._websiteToolsPreview = preview;
     }
     
@@ -782,7 +822,7 @@
     hideLinkPreview(link = null) {
       if (link && link._websiteToolsPreview) {
         link._websiteToolsPreview.remove();
-        delete link._websiteToolsPreview;
+        link._websiteToolsPreview = null;
       } else {
         // 清理所有预览
         document.querySelectorAll('.website-tools-link-preview').forEach(el => el.remove());
@@ -836,28 +876,17 @@
       switch (type) {
         case MESSAGE_TYPES.GET_LINK_STATS:
           return this.getLinkStats();
-        case MESSAGE_TYPES.EXTRACT_LINKS:
-          return this.extractLinks();
         default:
           return { error: '未知的消息类型' };
       }
     }
     
     /**
-     * 切换功能（确保互斥）
+     * 切换功能（支持独立控制）
      */
     toggle(feature, enabled) {
       const oldSettings = { ...this.settings };
       this.settings[feature] = enabled;
-      
-      // 如果启用了一个功能，自动禁用另一个
-      if (enabled) {
-        if (feature === 'newTabForExternal') {
-          this.settings.popupPreview = false;
-        } else if (feature === 'popupPreview') {
-          this.settings.newTabForExternal = false;
-        }
-      }
       
       // 重新设置模式
       this.setupLinkMode();
@@ -883,81 +912,6 @@
       });
       
       Logger.log('链接管理模块已销毁');
-    }
-    
-    /**
-     * 提取页面所有链接
-     */
-    extractLinks() {
-      const links = document.querySelectorAll('a[href]');
-      const currentDomain = window.location.hostname;
-      const extractedLinks = [];
-      
-      links.forEach((link, index) => {
-        try {
-          const url = new URL(link.href, window.location.href);
-          const isExternal = url.hostname !== currentDomain;
-          
-          // 获取链接文本
-          let linkText = link.textContent.trim();
-          if (!linkText) {
-            // 如果没有文本，尝试获取图片alt或title
-            const img = link.querySelector('img');
-            if (img) {
-              linkText = img.alt || img.title || '图片链接';
-            } else {
-              linkText = link.title || '无标题链接';
-            }
-          }
-          
-          // 限制文本长度
-          if (linkText.length > 50) {
-            linkText = linkText.substring(0, 47) + '...';
-          }
-          
-          extractedLinks.push({
-            id: index + 1,
-            href: link.href,
-            text: linkText,
-            title: link.title || '',
-            isExternal: isExternal,
-            domain: url.hostname,
-            protocol: url.protocol,
-            pathname: url.pathname,
-            element: {
-              tagName: link.tagName,
-              className: link.className,
-              id: link.id
-            }
-          });
-        } catch (e) {
-          // 忽略无效链接
-          Logger.warn('无效链接:', link.href, e);
-        }
-      });
-      
-      // 按类型分组
-      const grouped = {
-        internal: extractedLinks.filter(link => !link.isExternal),
-        external: extractedLinks.filter(link => link.isExternal),
-        total: extractedLinks.length
-      };
-      
-      Logger.log('链接提取完成:', {
-        total: grouped.total,
-        internal: grouped.internal.length,
-        external: grouped.external.length
-      });
-      
-      return {
-        links: extractedLinks,
-        grouped: grouped,
-        stats: {
-          total: grouped.total,
-          internal: grouped.internal.length,
-          external: grouped.external.length
-        }
-      };
     }
   }
   

@@ -80,6 +80,22 @@ class SidePanelController {
                 throw new Error('无法获取当前标签页信息');
             }
             
+            // 检查是否为特殊页面
+            if (this.isSpecialPage(this.currentTab.url)) {
+                console.log('[侧边栏] 检测到特殊页面，跳过内容脚本通信:', this.currentTab.url);
+                this.pageInfo = {
+                    url: this.currentTab.url,
+                    title: this.currentTab.title,
+                    domain: this.getDisplayDomain(this.currentTab.url),
+                    hasImages: false,
+                    hasVideos: false,
+                    hasAudio: false,
+                    linkCount: 0,
+                    isSpecialPage: true
+                };
+                return;
+            }
+            
             const response = await chrome.tabs.sendMessage(this.currentTab.id, {
                 type: 'GET_PAGE_INFO'
             });
@@ -95,15 +111,62 @@ class SidePanelController {
             };
         } catch (error) {
             console.error('[侧边栏] 获取页面信息失败:', error);
+            
+            // 如果通信失败，可能是特殊页面或内容脚本未加载
+            const isSpecial = this.isSpecialPage(this.currentTab?.url);
+            
             this.pageInfo = {
                 url: this.currentTab?.url || '',
                 title: this.currentTab?.title || '',
-                domain: this.currentTab?.url ? new URL(this.currentTab.url).hostname : '未知',
+                domain: this.getDisplayDomain(this.currentTab?.url),
                 hasImages: false,
                 hasVideos: false,
                 hasAudio: false,
-                linkCount: 0
+                linkCount: 0,
+                isSpecialPage: isSpecial,
+                connectionError: !isSpecial // 如果不是特殊页面，则标记为连接错误
             };
+        }
+    }
+    
+    /**
+     * 检查是否为特殊页面（无法注入内容脚本的页面）
+     */
+    isSpecialPage(url) {
+        if (!url) return true;
+        
+        const specialPagePrefixes = [
+            'chrome://',
+            'chrome-extension://',
+            'moz-extension://',
+            'edge://',
+            'about:',
+            'file://',
+            'data:',
+            'javascript:',
+            'chrome-search://',
+            'chrome-devtools://'
+        ];
+        
+        return specialPagePrefixes.some(prefix => url.startsWith(prefix));
+    }
+    
+    /**
+     * 获取显示用的域名
+     */
+    getDisplayDomain(url) {
+        if (!url) return '未知';
+        
+        try {
+            if (url.startsWith('chrome://')) return 'Chrome 内置页面';
+            if (url.startsWith('chrome-extension://')) return 'Chrome 扩展页面';
+            if (url.startsWith('about:')) return '浏览器页面';
+            if (url.startsWith('file://')) return '本地文件';
+            if (url.startsWith('data:')) return '数据页面';
+            
+            return new URL(url).hostname;
+        } catch (e) {
+            return '未知';
         }
     }
     
@@ -137,7 +200,19 @@ class SidePanelController {
         }
         
         if (statusElement) {
-            statusElement.textContent = '已连接';
+            if (this.pageInfo?.isSpecialPage) {
+                statusElement.textContent = '不支持的页面';
+                statusElement.style.color = '#f59e0b';
+                statusElement.title = '当前页面不支持扩展功能（浏览器内置页面）';
+            } else if (this.pageInfo?.connectionError) {
+                statusElement.textContent = '连接失败';
+                statusElement.style.color = '#ef4444';
+                statusElement.title = '无法与页面建立连接，请刷新页面重试';
+            } else {
+                statusElement.textContent = '已连接';
+                statusElement.style.color = '#10b981';
+                statusElement.title = '扩展功能正常可用';
+            }
         }
     }
     
@@ -171,13 +246,26 @@ class SidePanelController {
     updateStats() {
         if (!this.pageInfo) return;
         
-        // 链接统计
-        document.getElementById('totalLinks').textContent = this.pageInfo.linkCount || '0';
-        
         // 媒体统计
-        document.getElementById('imageCount').textContent = this.mediaCache.images.length || '0';
-        document.getElementById('videoCount').textContent = this.mediaCache.videos.length || '0';
-        document.getElementById('audioCount').textContent = this.mediaCache.audio.length || '0';
+        this.updateMediaCounts();
+    }
+    
+    /**
+     * 更新媒体计数
+     */
+    updateMediaCounts() {
+        const counts = {
+            imageCount: this.mediaCache.images.length,
+            videoCount: this.mediaCache.videos.length,
+            audioCount: this.mediaCache.audio.length
+        };
+        
+        Object.entries(counts).forEach(([id, count]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = count.toString();
+            }
+        });
     }
     
     /**
@@ -321,8 +409,6 @@ class SidePanelController {
         // 特殊处理
         if (moduleName === 'mediaExtractor') {
             this.updateMediaCounts();
-        } else if (moduleName === 'linkManager') {
-            this.updateLinkStats();
         }
     }
     
@@ -381,6 +467,18 @@ class SidePanelController {
                 throw new Error('无法获取当前标签页');
             }
             
+            // 检查是否为特殊页面
+            if (this.pageInfo?.isSpecialPage) {
+                this.showStatus('当前页面不支持此功能', 'warning');
+                return;
+            }
+            
+            // 检查连接状态
+            if (this.pageInfo?.connectionError) {
+                this.showStatus('页面连接失败，请刷新页面重试', 'error');
+                return;
+            }
+            
             let messageType;
             switch (action) {
                 case 'enableTextSelection':
@@ -399,17 +497,40 @@ class SidePanelController {
             const button = document.getElementById(action + 'Btn');
             this.setButtonLoading(button, true);
             
-            await chrome.tabs.sendMessage(this.currentTab.id, {
+            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
                 type: messageType,
                 data: { enabled: true }
             });
             
-            this.setButtonSuccess(button);
-            this.showStatus('操作成功');
+            if (response?.success) {
+                this.setButtonSuccess(button);
+                this.showStatus('操作成功');
+            } else {
+                throw new Error(response?.error || '操作失败');
+            }
             
         } catch (error) {
             console.error('[侧边栏] 执行功能失败:', error);
-            this.showStatus('操作失败', 'error');
+            
+            const button = document.getElementById(action + 'Btn');
+            this.setButtonLoading(button, false);
+            
+            if (error.message.includes('Could not establish connection')) {
+                this.showStatus('无法与页面建立连接，请刷新页面重试', 'error');
+                // 标记连接错误
+                if (this.pageInfo) {
+                    this.pageInfo.connectionError = true;
+                    this.updatePageInfo();
+                }
+            } else {
+                this.showStatus('操作失败: ' + error.message, 'error');
+            }
+        } finally {
+            // 确保按钮状态被重置
+            setTimeout(() => {
+                const button = document.getElementById(action + 'Btn');
+                this.setButtonLoading(button, false);
+            }, 1000);
         }
     }
     
@@ -420,6 +541,18 @@ class SidePanelController {
         try {
             if (!this.currentTab?.id) {
                 throw new Error('无法获取当前标签页');
+            }
+            
+            // 检查是否为特殊页面
+            if (this.pageInfo?.isSpecialPage) {
+                this.showStatus('当前页面不支持此功能', 'warning');
+                return;
+            }
+            
+            // 检查连接状态
+            if (this.pageInfo?.connectionError) {
+                this.showStatus('页面连接失败，请刷新页面重试', 'error');
+                return;
             }
             
             const button = document.getElementById(`extract${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
@@ -441,7 +574,17 @@ class SidePanelController {
             
         } catch (error) {
             console.error('[侧边栏] 提取媒体失败:', error);
-            this.showStatus('提取失败', 'error');
+            
+            if (error.message.includes('Could not establish connection')) {
+                this.showStatus('无法与页面建立连接，请刷新页面重试', 'error');
+                // 标记连接错误
+                if (this.pageInfo) {
+                    this.pageInfo.connectionError = true;
+                    this.updatePageInfo();
+                }
+            } else {
+                this.showStatus('提取失败: ' + error.message, 'error');
+            }
         } finally {
             const button = document.getElementById(`extract${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
             this.setButtonLoading(button, false);
@@ -501,45 +644,6 @@ class SidePanelController {
             </div>
         `;
         return div;
-    }
-    
-    /**
-     * 更新媒体数量
-     */
-    updateMediaCounts() {
-        const counts = {
-            'imageCount': this.mediaCache.images.length,
-            'videoCount': this.mediaCache.videos.length,
-            'audioCount': this.mediaCache.audio.length
-        };
-        
-        Object.entries(counts).forEach(([id, count]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = count.toString();
-            }
-        });
-    }
-    
-    /**
-     * 更新链接统计
-     */
-    async updateLinkStats() {
-        try {
-            if (!this.currentTab?.id) return;
-            
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
-                type: 'GET_LINK_STATS'
-            });
-            
-            if (response) {
-                document.getElementById('totalLinks').textContent = response.total || '0';
-                document.getElementById('externalLinks').textContent = response.external || '0';
-                document.getElementById('internalLinks').textContent = response.internal || '0';
-            }
-        } catch (error) {
-            console.error('[侧边栏] 更新链接统计失败:', error);
-        }
     }
     
     /**
