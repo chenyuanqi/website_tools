@@ -11,7 +11,8 @@
     "sidePanel",
     "scripting",
     "downloads",
-    "notifications"
+    "notifications",
+    "tabs"
   ],
   
   "host_permissions": [
@@ -19,16 +20,18 @@
   ],
   
   "background": {
-    "service_worker": "src/background/service-worker.js"
+    "service_worker": "src/background/index.js",
+    "type": "module"
   },
   
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": [
-        "src/content/main-simple.js"
+        "src/content/selection-unlock.js",
+        "src/content/link-rewriter.js",
+        "src/content/asset-collector.js"
       ],
-      "css": ["src/content/content.css"],
       "run_at": "document_end",
       "all_frames": true
     }
@@ -62,13 +65,14 @@
     {
       "resources": [
         "assets/images/*",
-        "src/content/*.css"
+        "src/content/*.css",
+        "src/shared/*.js"
       ],
       "matches": ["<all_urls>"]
     }
   ],
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' data: blob:;"
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' data: blob: https:;"
   }
 } 

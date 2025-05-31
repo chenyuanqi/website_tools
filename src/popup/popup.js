@@ -141,24 +141,119 @@ class PopupController {
                 throw new Error('无法获取当前标签页信息');
             }
             
-            // 添加超时机制，避免长时间等待
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('获取页面信息超时')), 3000);
-            });
+            // 检查是否为特殊页面
+            if (this.isSpecialPage(this.currentTab.url)) {
+                this.pageInfo = this.getDefaultPageInfo();
+                this.pageInfo.isSpecialPage = true;
+                return;
+            }
             
-            const messagePromise = chrome.tabs.sendMessage(this.currentTab.id, {
-                type: MESSAGE_TYPES.GET_PAGE_INFO
-            });
-            
-            const response = await Promise.race([messagePromise, timeoutPromise]);
-            
+            // 使用重连机制获取页面信息
+            const response = await this.tryConnectWithRetry();
             this.pageInfo = response || this.getDefaultPageInfo();
             
             Logger.log('页面信息获取成功:', this.pageInfo);
         } catch (error) {
             Logger.warn('获取页面信息失败，使用默认信息:', error.message);
             this.pageInfo = this.getDefaultPageInfo();
+            this.pageInfo.connectionError = true;
         }
+    }
+    
+    /**
+     * 尝试连接Content Script，支持重试和主动注入
+     */
+    async tryConnectWithRetry(maxRetries = 2) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                Logger.log(`尝试连接Content Script (第${attempt}次)`);
+                
+                // 设置超时时间
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('连接超时')), 2000);
+                });
+                
+                const messagePromise = chrome.tabs.sendMessage(this.currentTab.id, {
+                    type: MESSAGE_TYPES.GET_PAGE_INFO
+                });
+                
+                const response = await Promise.race([messagePromise, timeoutPromise]);
+                Logger.log('连接成功，收到响应:', response);
+                return response;
+                
+            } catch (error) {
+                Logger.warn(`第${attempt}次连接失败:`, error.message);
+                
+                if (attempt === maxRetries) {
+                    // 最后一次尝试失败，尝试主动注入Content Script
+                    Logger.log('所有连接尝试失败，尝试主动注入Content Script');
+                    try {
+                        await this.injectContentScript();
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒让脚本初始化
+                        
+                        const response = await chrome.tabs.sendMessage(this.currentTab.id, {
+                            type: MESSAGE_TYPES.GET_PAGE_INFO
+                        });
+                        Logger.log('注入后连接成功:', response);
+                        return response;
+                    } catch (injectError) {
+                        Logger.error('注入后仍然连接失败:', injectError);
+                        throw new Error('无法建立连接');
+                    }
+                } else {
+                    // 等待一段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                }
+            }
+        }
+    }
+    
+    /**
+     * 主动注入Content Script
+     */
+    async injectContentScript() {
+        try {
+            Logger.log('开始主动注入Content Script');
+            
+            // 检查是否有scripting权限
+            if (!chrome.scripting) {
+                throw new Error('缺少scripting权限');
+            }
+            
+            // 注入主要的Content Script
+            await chrome.scripting.executeScript({
+                target: { tabId: this.currentTab.id },
+                files: ['src/content/main-simple.js']
+            });
+            
+            Logger.log('Content Script注入成功');
+            
+        } catch (error) {
+            Logger.error('注入Content Script失败:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * 检查是否为特殊页面
+     */
+    isSpecialPage(url) {
+        if (!url) return true;
+        
+        const specialPagePrefixes = [
+            'chrome://',
+            'chrome-extension://',
+            'moz-extension://',
+            'edge://',
+            'about:',
+            'file://',
+            'data:',
+            'javascript:',
+            'chrome-search://',
+            'chrome-devtools://'
+        ];
+        
+        return specialPagePrefixes.some(prefix => url.startsWith(prefix));
     }
     
     /**
@@ -436,13 +531,18 @@ class PopupController {
             
             await chrome.storage.sync.set({ websiteToolsSettings: this.settings });
             
-            // 发送消息给content script
-            if (this.currentTab?.id) {
-                await chrome.tabs.sendMessage(this.currentTab.id, {
-                    type: 'ENABLE_NEW_TAB_MODE',
-                    data: { enabled: isEnabled }
-                });
-                console.log('[弹出窗口] 已发送新标签页模式消息:', isEnabled);
+            // 使用重连机制发送消息给content script
+            if (this.currentTab?.id && !this.isSpecialPage(this.currentTab.url)) {
+                try {
+                    await this.sendMessageWithRetry({
+                        type: 'ENABLE_NEW_TAB_MODE',
+                        data: { enabled: isEnabled }
+                    });
+                    console.log('[弹出窗口] 已发送新标签页模式消息:', isEnabled);
+                } catch (error) {
+                    console.warn('[弹出窗口] 发送新标签页模式消息失败:', error);
+                    // 不阻止设置保存，只是无法立即应用到当前页面
+                }
             }
             
             // 更新按钮状态
@@ -469,13 +569,18 @@ class PopupController {
             
             await chrome.storage.sync.set({ websiteToolsSettings: this.settings });
             
-            // 发送消息给content script
-            if (this.currentTab?.id) {
-                await chrome.tabs.sendMessage(this.currentTab.id, {
-                    type: 'ENABLE_TARGET_BLANK_MODE',
-                    data: { enabled: isEnabled }
-                });
-                console.log('[弹出窗口] 已发送Target属性模式消息:', isEnabled);
+            // 使用重连机制发送消息给content script
+            if (this.currentTab?.id && !this.isSpecialPage(this.currentTab.url)) {
+                try {
+                    await this.sendMessageWithRetry({
+                        type: 'ENABLE_TARGET_BLANK_MODE',
+                        data: { enabled: isEnabled }
+                    });
+                    console.log('[弹出窗口] 已发送Target属性模式消息:', isEnabled);
+                } catch (error) {
+                    console.warn('[弹出窗口] 发送Target属性模式消息失败:', error);
+                    // 不阻止设置保存，只是无法立即应用到当前页面
+                }
             }
             
             // 更新按钮状态
@@ -699,6 +804,50 @@ class PopupController {
             'mediaExtractor': '媒体提取'
         };
         return names[feature] || feature;
+    }
+    
+    /**
+     * 带重连机制的消息发送
+     */
+    async sendMessageWithRetry(message, maxRetries = 2) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                Logger.log(`发送消息 (第${attempt}次):`, message.type);
+                
+                // 设置超时时间
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('消息发送超时')), 2000);
+                });
+                
+                const messagePromise = chrome.tabs.sendMessage(this.currentTab.id, message);
+                
+                const response = await Promise.race([messagePromise, timeoutPromise]);
+                Logger.log('消息发送成功，收到响应:', response);
+                return response;
+                
+            } catch (error) {
+                Logger.warn(`第${attempt}次消息发送失败:`, error.message);
+                
+                if (attempt === maxRetries) {
+                    // 最后一次尝试失败，尝试重新注入并重试
+                    Logger.log('消息发送失败，尝试重新注入Content Script');
+                    try {
+                        await this.injectContentScript();
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待脚本初始化
+                        
+                        const response = await chrome.tabs.sendMessage(this.currentTab.id, message);
+                        Logger.log('重新注入后消息发送成功:', response);
+                        return response;
+                    } catch (injectError) {
+                        Logger.error('重新注入后仍然失败:', injectError);
+                        throw new Error('无法建立连接');
+                    }
+                } else {
+                    // 等待一段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+        }
     }
 }
 

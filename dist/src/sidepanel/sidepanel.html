@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元气助手</title>
+  <link rel="stylesheet" crossorigin href="/sidepanel.css">
+</head>
+<body>
+    <div class="sidepanel-container">
+        <!-- 头部 -->
+        <header class="sidepanel-header">
+            <div class="header-info">
+                <h1 class="panel-title">
+                    <span class="title-icon">🔧</span>
+                    元气助手
+                </h1>
+                <div class="current-page" id="currentPageInfo">
+                    <span class="page-domain" id="pageDomain">加载中...</span>
+                    <span class="page-status" id="pageStatus">就绪</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="refreshBtn" title="刷新">🔄</button>
+                <button class="header-btn" id="settingsBtn" title="设置">⚙️</button>
+            </div>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="sidepanel-main">
+            <!-- 功能模块标签 -->
+            <nav class="module-tabs">
+                <button class="tab-btn active" data-module="copyFreedom">
+                    <span class="tab-icon">📋</span>
+                    <span class="tab-label">复制自由</span>
+                </button>
+                <button class="tab-btn" data-module="linkManager">
+                    <span class="tab-icon">🔗</span>
+                    <span class="tab-label">链接管理</span>
+                </button>
+                <button class="tab-btn" data-module="mediaExtractor">
+                    <span class="tab-icon">🎬</span>
+                    <span class="tab-label">媒体提取</span>
+                </button>
+            </nav>
+
+            <!-- 功能模块内容 -->
+            <div class="module-content">
+                <!-- 复制自由模块 -->
+                <section class="module-panel active" id="copyFreedomPanel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">复制限制解除</h2>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="copyFreedomEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <div class="feature-info">
+                                <h3 class="feature-name">文本选择</h3>
+                                <p class="feature-desc">解除网页的文本选择限制</p>
+                            </div>
+                            <div class="feature-controls">
+                                <label class="toggle-switch small">
+                                    <input type="checkbox" id="textSelectionEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <button class="action-btn" id="enableTextSelectionBtn">
+                                    <span class="btn-icon">✂️</span>
+                                    立即启用
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="feature-item">
+                            <div class="feature-info">
+                                <h3 class="feature-name">右键菜单</h3>
+                                <p class="feature-desc">恢复被禁用的右键菜单</p>
+                            </div>
+                            <div class="feature-controls">
+                                <label class="toggle-switch small">
+                                    <input type="checkbox" id="rightClickEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <button class="action-btn" id="restoreRightClickBtn">
+                                    <span class="btn-icon">🖱️</span>
+                                    立即恢复
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="feature-item">
+                            <div class="feature-info">
+                                <h3 class="feature-name">快捷键</h3>
+                                <p class="feature-desc">恢复复制粘贴等快捷键</p>
+                            </div>
+                            <div class="feature-controls">
+                                <label class="toggle-switch small">
+                                    <input type="checkbox" id="shortcutsEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <button class="action-btn" id="restoreShortcutsBtn">
+                                    <span class="btn-icon">⌨️</span>
+                                    立即恢复
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 链接管理模块 -->
+                <section class="module-panel" id="linkManagerPanel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">链接管理</h2>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="linkManagerEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="feature-list">
+                        <div class="feature-item">
+                            <div class="feature-info">
+                                <h3 class="feature-name">新标签页打开</h3>
+                                <p class="feature-desc">外部链接在新标签页打开</p>
+                            </div>
+                            <div class="feature-controls">
+                                <label class="toggle-switch small">
+                                    <input type="checkbox" id="newTabEnabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="feature-item">
+                            <div class="feature-info">
+                                <h3 class="feature-name">链接预览</h3>
+                                <p class="feature-desc">弹框预览链接内容</p>
+                            </div>
+                            <div class="feature-controls">
+                                <label class="toggle-switch small">
+                                    <input type="checkbox" id="previewEnabled">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 媒体提取模块 -->
+                <section class="module-panel" id="mediaExtractorPanel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">媒体提取</h2>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mediaExtractorEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="extraction-controls">
+                        <button class="extract-btn" id="extractImagesBtn">
+                            <span class="btn-icon">🖼️</span>
+                            <span class="btn-text">提取图片</span>
+                            <span class="btn-count" id="imageCount">0</span>
+                        </button>
+                        <button class="extract-btn" id="extractVideosBtn">
+                            <span class="btn-icon">🎥</span>
+                            <span class="btn-text">检测视频</span>
+                            <span class="btn-count" id="videoCount">0</span>
+                        </button>
+                        <button class="extract-btn" id="extractAudioBtn">
+                            <span class="btn-icon">🎵</span>
+                            <span class="btn-text">检测音频</span>
+                            <span class="btn-count" id="audioCount">0</span>
+                        </button>
+                    </div>
+
+                    <!-- 媒体列表 -->
+                    <div class="media-list" id="mediaList">
+                        <div class="empty-state" id="emptyState">
+                            <div class="empty-icon">📁</div>
+                            <p class="empty-text">点击上方按钮开始提取媒体文件</p>
+                        </div>
+                    </div>
+
+                    <!-- 批量操作 -->
+                    <div class="batch-actions" id="batchActions" style="display: none;">
+                        <button class="batch-btn" id="selectAllBtn">全选</button>
+                        <button class="batch-btn" id="downloadSelectedBtn">下载选中</button>
+                        <button class="batch-btn" id="clearListBtn">清空列表</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 页脚状态栏 -->
+        <footer class="sidepanel-footer">
+            <div class="status-info">
+                <span class="status-text" id="statusText">就绪</span>
+                <span class="status-dot" id="statusDot"></span>
+            </div>
+            <div class="footer-actions">
+                <button class="footer-btn" id="exportSettingsBtn" title="导出设置">📤</button>
+                <button class="footer-btn" id="importSettingsBtn" title="导入设置">📥</button>
+                <button class="footer-btn" id="helpBtn" title="帮助">❓</button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html> 

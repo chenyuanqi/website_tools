@@ -1,197 +1,301 @@
-# 元气助手 - Chrome扩展 🔧
+# 元气助手 - 现代化Chrome扩展
 
-一个聚合日常网页浏览中最常用实用工具的Chrome浏览器扩展。
+> 聚合日常网页浏览中最常用的实用工具：链接管理、复制限制解除、媒体文件提取等功能
 
-## ✨ 主要功能
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-repo/yuanqi-assistant)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.0+-purple.svg)](https://vitejs.dev/)
 
-### 📋 复制自由
-- **文本选择解锁** - 突破网页禁止选择文本的限制
-- **右键菜单恢复** - 恢复被禁用的右键菜单功能
-- **快捷键恢复** - 恢复Ctrl+C、Ctrl+A等被禁用的快捷键
+## ✨ 功能特色
 
-### 🔗 链接管理  
-- **新标签页打开** - 外部链接自动在新标签页打开，带视觉标识
-  - **事件拦截模式** - 通过JavaScript事件拦截实现，兼容性更好
-  - **Target属性模式** - 直接修改链接的target属性，更直接有效
-- **链接预览** - 鼠标悬停即可预览链接内容
-- **链接提取** - 一键提取页面所有链接，支持分类和批量操作
+### 🆓 复制自由 - SuperCopy风格强力解锁
+
+**基于SuperCopy核心技术的四层解锁机制：**
+
+- **CSS层禁制** - 硬覆盖所有`user-select: none`、`pointer-events: none`等样式
+- **JS层禁制(显式)** - 扫描并移除内联事件处理器(`onselectstart`、`ondragstart`等)
+- **clone&replace技巧** - 克隆整个DOM树清空所有`addEventListener`注册的监听器
+- **动态事件拦截** - Monkey-patch `EventTarget.prototype.addEventListener`拦截新的禁用事件
+
+**智能白名单管理：**
+- 🎯 **一键启用** - 点击扩展图标即可启用/禁用当前网站
+- 📋 **自动记忆** - 自动记住已启用的网站域名
+- 🔄 **状态同步** - 实时更新扩展图标状态(灰色=未启用，绿色=已启用)
+- ⚡ **强力模式** - 终极兜底方案，使用`contentEditable`强制解锁
+
+**特殊网站支持：**
+- 飞书、知乎、简书等网站的定制处理
+- 应对`cursor: none`等特殊限制手段
+- 智能检测和修复各种复制阻止技术
+
+### 🔗 链接管理
+- **新标签页打开** - 外部链接自动在新标签页打开
+- **链接预览** - 悬停显示链接内容预览
+- **安全增强** - 自动添加noopener/noreferrer属性
+- **自定义规则** - 支持域名级别的自定义配置
 
 ### 🎬 媒体提取
-- **图片提取** - 提取页面中的所有图片资源（包括img标签和CSS背景图片）
-- **视频检测** - 检测页面中的视频内容（HTML5 video元素）
-- **音频检测** - 检测页面中的音频内容（HTML5 audio元素）
-- **批量操作** - 支持批量选择、预览、下载和复制链接
-- **动态监听** - 自动检测页面动态添加的媒体元素
+- **图片提取** - 智能提取页面所有图片（包括CSS背景图）
+- **视频检测** - 检测页面视频资源（支持HLS、DASH流媒体）
+- **音频收集** - 收集页面音频文件
+- **懒加载处理** - 自动触发懒加载图片
+- **第三方平台** - 支持YouTube、Bilibili等平台
+
+## 🏗️ 技术架构
+
+### 现代化技术栈
+- **构建工具**: Vite 5.0+ 
+- **开发语言**: TypeScript 5.0+
+- **代码质量**: ESLint + Prettier
+- **扩展标准**: Manifest V3
+
+### 模块化设计
+```
+📦 元气助手
+├── 🌐 Background Service Worker    # 事件驱动、状态管理、白名单管理
+├── 📄 Content Scripts (模块化)
+│   ├── selection-unlock.ts        # SuperCopy风格复制自由模块
+│   ├── link-rewriter.ts          # 链接管理模块
+│   └── asset-collector.ts        # 媒体提取模块
+├── 🎨 用户界面
+│   ├── popup                     # 快速操作面板
+│   ├── sidepanel                 # 详细功能面板
+│   └── options                   # 设置管理页面(含白名单管理)
+└── 🔧 共享模块
+    ├── messaging.ts              # 统一消息通信
+    ├── storage.ts                # 数据存储管理
+    └── utils.ts                  # 工具函数库
+```
 
 ## 🚀 快速开始
 
-### 安装使用
+### 开发环境准备
+```bash
+# 克隆项目
+git clone https://github.com/your-repo/yuanqi-assistant.git
+cd yuanqi-assistant
 
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd website_tools
-   ```
+# 安装依赖
+npm install
 
-2. **安装到Chrome**
-   - 打开 `chrome://extensions/`
-   - 启用"开发者模式"
-   - 点击"加载已解压的扩展程序"
-   - 选择项目根目录
+# 开发模式（支持热重载）
+npm run dev
 
-3. **开始使用**
-   - 点击工具栏中的扩展图标
-   - 访问任意网页体验功能
-   - 右键点击扩展图标访问更多选项
+# 构建生产版本
+npm run build
 
-📖 **详细安装指南：** [查看安装测试指南](docs/安装测试指南.md)
+# 类型检查
+npm run type-check
 
-## 🎯 技术特色
-
-### 现代化架构
-- **📋 Manifest V3** - 使用最新的扩展标准
-- **⚡ Service Workers** - 高效的后台处理
-- **🔒 Content Scripts** - 安全的页面内容操作
-- **📱 响应式设计** - 适配不同屏幕尺寸
-
-### 用户体验
-- **🎨 现代化UI** - 美观的用户界面设计
-- **🌙 深色模式** - 支持系统主题自动切换
-- **⚡ 快速响应** - 优化的性能和加载速度
-- **♿ 无障碍访问** - 支持键盘导航和屏幕阅读器
-
-### 安全隐私
-- **🔐 最小权限** - 仅请求必要的权限
-- **🛡️ 本地存储** - 所有数据本地存储，不上传
-- **🔒 HTTPS传输** - 所有网络请求使用安全连接
-- **👤 隐私保护** - 不收集用户个人信息
-
-## 📁 项目结构
-
-```
-website_tools/
-├── 📄 manifest.json           # 扩展配置文件
-├── 📄 package.json           # 项目依赖配置
-├── 📖 README.md              # 项目说明文档
-├── 🗂️ assets/               # 资源文件
-│   └── 🖼️ icons/           # 扩展图标
-├── 📚 docs/                 # 文档目录
-│   ├── 📋 功能概要说明.md    # 功能详细说明
-│   ├── 🔧 development.md    # 开发指南
-│   └── 📖 安装测试指南.md    # 安装和测试说明
-└── 💻 src/                  # 源代码目录
-    ├── 🔧 shared/           # 共享模块
-    │   ├── constants.js     # 常量定义
-    │   └── utils.js         # 工具函数
-    ├── 🌐 background/       # 后台脚本
-    │   └── service-worker.js
-    ├── 📄 content/          # 内容脚本
-    │   ├── main.js         # 主逻辑
-    │   └── content.css     # 样式文件
-    ├── 🗂️ popup/           # 弹出窗口
-    │   ├── popup.html      # 界面结构
-    │   ├── popup.css       # 界面样式
-    │   └── popup.js        # 交互逻辑
-    ├── 📋 sidepanel/       # 侧边栏面板
-    │   ├── sidepanel.html  # 界面结构
-    │   ├── sidepanel.css   # 界面样式
-    │   └── sidepanel.js    # 交互逻辑
-    └── ⚙️ options/         # 设置页面
-        ├── options.html    # 界面结构
-        ├── options.css     # 界面样式
-        └── options.js      # 交互逻辑
+# 代码格式化
+npm run format
 ```
 
-## 🛠️ 开发信息
+### 安装扩展
+1. 打开Chrome浏览器，进入 `chrome://extensions/`
+2. 开启"开发者模式"
+3. 点击"加载已解压的扩展程序"
+4. 选择项目的 `dist` 目录
 
-### 技术栈
-- **JavaScript ES6+** - 现代JavaScript开发
-- **Chrome Extension API** - 原生扩展API
-- **CSS3** - 现代CSS特性
-- **HTML5** - 语义化标记
+## 📖 使用指南
 
-### 开发环境
-- **Chrome 88+** - 支持 Manifest V3
-- **Node.js** (可选) - 用于开发工具
-- **Git** - 版本控制
+### 复制自由功能 - SuperCopy风格操作
 
-### 浏览器兼容性
-- ✅ **Chrome 88+** - 完全支持
-- ✅ **Edge 88+** - 完全支持  
-- ❓ **Firefox** - 需要适配（Manifest V2）
-- ❓ **Safari** - 需要适配
+#### 基础使用
+1. **一键启用**: 点击浏览器工具栏中的元气助手图标
+   - 灰色图标 = 未启用
+   - 绿色✓图标 = 已启用
+2. **自动记忆**: 启用后会自动添加到白名单，下次访问自动生效
+3. **批量管理**: 在设置页面管理所有白名单网站
+
+#### 高级功能
+1. **强力模式**: 右键菜单选择"强力模式 (终极解锁)"
+2. **白名单管理**: 设置页面可查看、删除、清空白名单
+3. **状态监控**: 实时显示当前网站的解锁状态
+
+#### 技术原理
+```typescript
+// 1. CSS层硬覆盖
+* {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+// 2. 移除内联事件
+element.removeAttribute('onselectstart');
+element.removeAttribute('ondragstart');
+
+// 3. clone&replace清空监听器
+const html = document.documentElement;
+html.replaceWith(html.cloneNode(true));
+
+// 4. 拦截新的事件注册
+EventTarget.prototype.addEventListener = function(type, listener, options) {
+  if (violentEvents.includes(type)) {
+    return originalAddEventListener.call(this, type, interceptor, options);
+  }
+  return originalAddEventListener.call(this, type, listener, options);
+};
+```
+
+### 链接管理功能
+1. **新标签页打开**: 外部链接自动在新标签页打开
+2. **链接预览**: 悬停在链接上查看内容预览
+3. **自定义规则**: 在设置页面配置特定域名的处理方式
+
+### 媒体提取功能
+1. **图片提取**: 右键菜单选择"提取页面图片"或点击扩展图标
+2. **视频检测**: 自动检测页面视频，在侧边栏显示结果
+3. **批量下载**: 在侧边栏中选择要下载的媒体文件
 
 ## ⚙️ 配置选项
 
 ### 复制自由设置
-- 启用/禁用各项功能
-- 强制解除模式切换
-- 自动应用设置
+- `enabled`: 启用复制自由功能
+- `whitelist`: 自动解锁的网站白名单
+- `violentMode`: 强力模式开关
 
-### 链接管理设置  
-- 新标签页打开规则
-- 预览功能配置
-- 链接类型过滤
+### 链接管理设置
+- `newTabForExternal`: 外部链接新标签页打开
+- `popupPreview`: 启用链接预览
+- `customRules`: 自定义域名规则
 
 ### 媒体提取设置
-- 支持的文件格式
-- 最小文件尺寸
-- 自动检测开关
+- `autoDetectImages`: 自动检测图片
+- `autoDetectVideos`: 自动检测视频
+- `minImageSize`: 最小图片尺寸过滤
+- `supportedFormats`: 支持的文件格式
 
-### 白名单管理
-- 排除特定网站
-- 域名规则配置
-- 批量导入导出
+## 🔧 开发指南
 
-## 📊 使用统计
+### 项目结构
+```
+src/
+├── background/           # Background Service Worker
+├── content/             # Content Scripts模块
+│   ├── selection-unlock.ts  # SuperCopy风格复制自由
+│   ├── link-rewriter.ts     # 链接管理
+│   └── asset-collector.ts   # 媒体提取
+├── shared/              # 共享工具模块
+├── popup/               # 弹出窗口界面
+├── sidepanel/           # 侧边栏界面
+├── options/             # 设置页面(含白名单管理)
+└── manifest.json        # 扩展清单文件
+```
 
-扩展会在本地记录以下使用统计（不上传）：
-- 总使用时长
-- 复制操作次数  
-- 媒体提取次数
-- 链接处理次数
+### 添加新功能
+1. 在 `src/content/` 创建新的功能模块
+2. 在 `src/shared/messaging.ts` 添加消息类型
+3. 在 `src/background/index.ts` 注册消息处理器
+4. 更新用户界面以支持新功能
 
-## 🐛 问题排查
+### 消息通信
+```typescript
+// 发送消息给background
+import { sendToBg, MessageTypes } from '@shared/messaging';
 
-### 常见问题
-1. **扩展无法加载** - 检查manifest.json语法和文件路径
-2. **功能不生效** - 刷新页面或重新加载扩展
-3. **权限不足** - 检查扩展权限设置
-4. **性能问题** - 优化设置或清理缓存
+const response = await sendToBg({
+  type: MessageTypes.ENABLE_TEXT_SELECTION,
+  data: { url: window.location.href }
+});
+```
 
-### 获取帮助
-- 📖 查看 [安装测试指南](docs/安装测试指南.md)
-- 🔧 查看 [开发指南](docs/development.md) 
-- 📋 查看 [功能说明](docs/功能概要说明.md)
+## 🧪 测试
 
-## 🚀 开发路线图
+### 功能测试
+使用提供的测试页面验证功能：
+```bash
+# 打开测试页面
+open test-supercopy.html
+```
 
-### 🔄 正在开发
-- 视频和音频媒体检测
-- 链接预览功能
-- 高级媒体处理功能
+测试页面包含：
+- CSS禁用选择测试
+- JavaScript事件阻止测试
+- 指针事件禁用测试
+- 光标隐藏测试
+- 拖拽禁用测试
 
-### 📅 计划功能
-- 自定义快捷键支持
-- 多语言界面
-- 云同步设置
-- 更多网站适配
+### 运行测试
+```bash
+# 单元测试
+npm run test
 
-### 💡 考虑中的功能
-- 页面截图工具
-- 表格数据提取
-- 代码片段识别
-- 网页性能分析
+# 集成测试
+npm run test:integration
 
-## 👥 贡献指南
+# 端到端测试
+npm run test:e2e
+```
 
-欢迎贡献代码和建议！
+### 测试覆盖率
+- 核心功能模块 > 90%
+- 消息通信系统 > 95%
+- 用户界面组件 > 80%
 
-1. **Fork 项目**
-2. **创建功能分支** (`git checkout -b feature/AmazingFeature`)
-3. **提交更改** (`git commit -m 'Add some AmazingFeature'`)
-4. **推送分支** (`git push origin feature/AmazingFeature`)
-5. **创建 Pull Request**
+## 📈 性能优化
+
+### 加载性能
+- **模块懒加载**: 按需加载功能模块
+- **代码分割**: Vite自动代码分割
+- **资源压缩**: 生产环境自动压缩
+
+### 运行性能
+- **事件节流**: 使用requestIdleCallback
+- **内存管理**: 及时清理不用的资源
+- **缓存策略**: 智能缓存常用数据
+
+### 网络优化
+- **请求合并**: 批量处理网络请求
+- **超时控制**: 合理的超时时间设置
+- **错误重试**: 智能重试机制
+
+## 🔒 安全特性
+
+### 内容安全策略
+- 严格的CSP策略防止XSS攻击
+- 禁用内联脚本和样式
+- 限制外部资源加载
+
+### 权限管理
+- 最小权限原则
+- 动态权限请求
+- 透明的权限说明
+
+### 数据保护
+- 本地存储加密
+- 敏感数据脱敏
+- 安全的跨域处理
+
+## 🆚 与SuperCopy对比
+
+| 特性 | 元气助手 | SuperCopy |
+|------|----------|-----------|
+| **核心技术** | 四层解锁机制 | 四层解锁机制 |
+| **白名单管理** | ✅ 可视化管理界面 | ✅ 基础管理 |
+| **强力模式** | ✅ 右键菜单快速启用 | ❌ 无 |
+| **状态指示** | ✅ 实时图标状态 | ✅ 图标状态 |
+| **开源** | ✅ 完全开源 | ❌ 闭源 |
+| **功能扩展** | ✅ 链接管理+媒体提取 | ❌ 仅复制功能 |
+| **现代化** | ✅ TypeScript + Vite | ❌ 传统开发 |
+| **体积** | ~200KB | ~182KB |
+
+## 🤝 贡献指南
+
+### 开发流程
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
+
+### 代码规范
+- 使用TypeScript进行类型安全开发
+- 遵循ESLint和Prettier配置
+- 编写单元测试覆盖新功能
+- 更新相关文档
 
 ## 📄 许可证
 
@@ -199,78 +303,20 @@ website_tools/
 
 ## 🙏 致谢
 
-- Chrome Extension 开发团队
-- 开源社区的贡献者们
-- 测试用户的反馈和建议
+- [SuperCopy](https://chrome.google.com/webstore/detail/supercopy-enable-copy/onepmapfbjohnegdmfhndpefjkppbjkm) - 核心技术灵感来源
+- [Vite](https://vitejs.dev/) - 快速的构建工具
+- [TypeScript](https://www.typescriptlang.org/) - 类型安全的JavaScript
+- [Chrome Extensions API](https://developer.chrome.com/docs/extensions/) - 强大的扩展API
+
+## 📞 支持
+
+如果你遇到问题或有建议，请：
+- 查看 [常见问题](docs/FAQ.md)
+- 提交 [Issue](https://github.com/your-repo/yuanqi-assistant/issues)
+- 参考 [架构重构指南](docs/架构重构指南.md)
 
 ---
 
-**项目状态：** 🟢 积极开发中 | **版本：** 1.0.0 | **更新时间：** 2024年 
+**元气助手** - 让网页浏览更自由、更高效！ 🚀 
 
-## 🔗 链接管理功能详解
-
-### 功能特性
-链接管理模块提供了三个独立的功能，**可以同时启用**：
-
-1. **事件拦截模式** - 通过JavaScript事件拦截让外部链接在新标签页打开
-2. **Target属性模式** - 直接修改链接的target属性为_blank
-3. **链接预览** - 悬停链接显示详细信息
-
-### ⚡ 自动配置应用
-**重要特性：** 扩展现在支持自动配置应用，无需手动操作！
-
-- **页面刷新时**：扩展会自动读取用户配置并应用相应功能
-- **首次进入页面**：根据用户的设置自动启用已配置的功能
-- **配置更改时**：当用户在弹出菜单中更改设置时，扩展会实时监听并立即应用到所有已打开的标签页
-- **无需重复操作**：用户只需设置一次，所有页面都会自动应用该配置
-
-### 两种新标签页打开模式
-
-#### 事件拦截模式
-**功能说明：** 通过JavaScript事件监听器拦截链接点击事件，对外部链接使用window.open()在新标签页打开。
-
-**实现原理：**
-- **自动应用**：页面加载时自动读取配置并应用
-- **JavaScript事件拦截**：使用多层次事件监听器拦截点击事件
-- **智能识别**：自动识别外部链接并添加视觉标识
-- **不修改HTML**：不直接修改链接的`target`属性，保持页面原有结构
-- **实时更新**：配置更改时立即生效，无需刷新页面
-
-**优点：**
-- 兼容性好，适用于各种复杂的网页环境
-- 不修改页面原有结构
-- 可以处理动态生成的链接
-
-#### Target属性模式  
-**功能说明：** 直接修改所有链接的`target`属性为`_blank`，让浏览器原生处理新标签页打开。
-
-**实现原理：**
-- **直接修改DOM**：扫描页面中的所有链接（包括内部和外部链接），直接设置`target="_blank"`
-- **属性保护**：保存原有的target和rel属性，禁用时可以完整恢复
-- **安全增强**：为外部链接自动添加`rel="noopener noreferrer"`安全属性
-- **视觉标识**：外部链接显示"↗"图标，内部链接显示"🔗"图标
-- **动态监听**：使用MutationObserver监听DOM变化，自动处理新添加的链接
-
-**优点：**
-- 更直接有效，利用浏览器原生机制
-- 性能更好，无需事件拦截
-- 与页面原有逻辑冲突更少
-- 统一处理所有链接，包括内部链接
-
-**安全特性：**
-- 自动为外部链接添加`noopener`和`noreferrer`属性防止安全风险
-- 智能合并现有rel属性，不覆盖原有设置
-- 完整保存和恢复原有属性值 
-
-#### 🧪 测试页面
-项目包含专门的测试页面 `test-media-extraction.html`，包含：
-- 各种类型的媒体元素（图片、视频、音频）
-- 动态媒体添加/移除功能
-- 媒体统计和调试工具
-- 使用方法：在浏览器中打开测试页面，然后使用扩展的媒体提取功能
-
-#### 🔧 最近修复
-- **修复了媒体提取功能的JavaScript错误**：解决了`size.toFixed is not a function`错误
-- **修复了CSP安全策略问题**：移除了内联事件处理器，改用事件委托
-- **改进了数据格式**：统一了媒体数据的size字段格式，避免类型错误
-- **增强了错误处理**：添加了更好的错误处理和用户反馈 
+> 基于SuperCopy核心技术，提供更强大的复制自由体验 

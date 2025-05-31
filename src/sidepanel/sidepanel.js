@@ -96,9 +96,8 @@ class SidePanelController {
                 return;
             }
             
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
-                type: 'GET_PAGE_INFO'
-            });
+            // 尝试连接，如果失败则主动注入Content Script
+            const response = await this.tryConnectWithRetry();
             
             this.pageInfo = response || {
                 url: this.currentTab.url,
@@ -473,12 +472,6 @@ class SidePanelController {
                 return;
             }
             
-            // 检查连接状态
-            if (this.pageInfo?.connectionError) {
-                this.showStatus('页面连接失败，请刷新页面重试', 'error');
-                return;
-            }
-            
             let messageType;
             switch (action) {
                 case 'enableTextSelection':
@@ -497,7 +490,8 @@ class SidePanelController {
             const button = document.getElementById(action + 'Btn');
             this.setButtonLoading(button, true);
             
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
+            // 使用重连机制发送消息
+            const response = await this.sendMessageWithRetry({
                 type: messageType,
                 data: { enabled: true }
             });
@@ -515,8 +509,8 @@ class SidePanelController {
             const button = document.getElementById(action + 'Btn');
             this.setButtonLoading(button, false);
             
-            if (error.message.includes('Could not establish connection')) {
-                this.showStatus('无法与页面建立连接，请刷新页面重试', 'error');
+            if (error.message.includes('无法建立连接')) {
+                this.showStatus('页面连接失败，已尝试自动修复', 'error');
                 // 标记连接错误
                 if (this.pageInfo) {
                     this.pageInfo.connectionError = true;
@@ -549,17 +543,13 @@ class SidePanelController {
                 return;
             }
             
-            // 检查连接状态
-            if (this.pageInfo?.connectionError) {
-                this.showStatus('页面连接失败，请刷新页面重试', 'error');
-                return;
-            }
-            
             const button = document.getElementById(`extract${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
             this.setButtonLoading(button, true);
             
             const messageType = `EXTRACT_${type.toUpperCase()}`;
-            const response = await chrome.tabs.sendMessage(this.currentTab.id, {
+            
+            // 使用重连机制发送消息
+            const response = await this.sendMessageWithRetry({
                 type: messageType
             });
             
@@ -575,8 +565,8 @@ class SidePanelController {
         } catch (error) {
             console.error('[侧边栏] 提取媒体失败:', error);
             
-            if (error.message.includes('Could not establish connection')) {
-                this.showStatus('无法与页面建立连接，请刷新页面重试', 'error');
+            if (error.message.includes('无法建立连接')) {
+                this.showStatus('页面连接失败，已尝试自动修复', 'error');
                 // 标记连接错误
                 if (this.pageInfo) {
                     this.pageInfo.connectionError = true;
@@ -890,6 +880,125 @@ class SidePanelController {
     showHelp() {
         const helpUrl = chrome.runtime.getURL('docs/user-guide.md');
         chrome.tabs.create({ url: helpUrl });
+    }
+    
+    /**
+     * 尝试连接Content Script，支持重试和主动注入
+     */
+    async tryConnectWithRetry(maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`[侧边栏] 尝试连接Content Script (第${attempt}次)`);
+                
+                // 设置超时时间
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('连接超时')), 2000);
+                });
+                
+                const messagePromise = chrome.tabs.sendMessage(this.currentTab.id, {
+                    type: 'GET_PAGE_INFO'
+                });
+                
+                const response = await Promise.race([messagePromise, timeoutPromise]);
+                console.log('[侧边栏] 连接成功，收到响应:', response);
+                return response;
+                
+            } catch (error) {
+                console.warn(`[侧边栏] 第${attempt}次连接失败:`, error.message);
+                
+                if (attempt === maxRetries) {
+                    // 最后一次尝试失败，尝试主动注入Content Script
+                    console.log('[侧边栏] 所有连接尝试失败，尝试主动注入Content Script');
+                    await this.injectContentScript();
+                    
+                    // 注入后再尝试一次连接
+                    try {
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒让脚本初始化
+                        const response = await chrome.tabs.sendMessage(this.currentTab.id, {
+                            type: 'GET_PAGE_INFO'
+                        });
+                        console.log('[侧边栏] 注入后连接成功:', response);
+                        return response;
+                    } catch (injectError) {
+                        console.error('[侧边栏] 注入后仍然连接失败:', injectError);
+                        throw new Error('无法建立连接，请手动刷新页面');
+                    }
+                } else {
+                    // 等待一段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
+            }
+        }
+    }
+    
+    /**
+     * 主动注入Content Script
+     */
+    async injectContentScript() {
+        try {
+            console.log('[侧边栏] 开始主动注入Content Script');
+            
+            // 检查是否有scripting权限
+            if (!chrome.scripting) {
+                throw new Error('缺少scripting权限');
+            }
+            
+            // 注入主要的Content Script
+            await chrome.scripting.executeScript({
+                target: { tabId: this.currentTab.id },
+                files: ['src/content/main-simple.js']
+            });
+            
+            console.log('[侧边栏] Content Script注入成功');
+            
+        } catch (error) {
+            console.error('[侧边栏] 注入Content Script失败:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * 带重连机制的消息发送
+     */
+    async sendMessageWithRetry(message, maxRetries = 2) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`[侧边栏] 发送消息 (第${attempt}次):`, message.type);
+                
+                // 设置超时时间
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('消息发送超时')), 3000);
+                });
+                
+                const messagePromise = chrome.tabs.sendMessage(this.currentTab.id, message);
+                
+                const response = await Promise.race([messagePromise, timeoutPromise]);
+                console.log('[侧边栏] 消息发送成功，收到响应:', response);
+                return response;
+                
+            } catch (error) {
+                console.warn(`[侧边栏] 第${attempt}次消息发送失败:`, error.message);
+                
+                if (attempt === maxRetries) {
+                    // 最后一次尝试失败，尝试重新注入并重试
+                    console.log('[侧边栏] 消息发送失败，尝试重新注入Content Script');
+                    try {
+                        await this.injectContentScript();
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待脚本初始化
+                        
+                        const response = await chrome.tabs.sendMessage(this.currentTab.id, message);
+                        console.log('[侧边栏] 重新注入后消息发送成功:', response);
+                        return response;
+                    } catch (injectError) {
+                        console.error('[侧边栏] 重新注入后仍然失败:', injectError);
+                        throw new Error('无法建立连接，请手动刷新页面');
+                    }
+                } else {
+                    // 等待一段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+        }
     }
 }
 
