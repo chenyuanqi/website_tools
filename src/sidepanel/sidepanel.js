@@ -638,11 +638,35 @@ class SidePanelController {
                 <div class="media-details">${this.getFileSize(item.size)} • ${this.getMediaTypeName(type)}</div>
             </div>
             <div class="media-actions">
-                <button class="media-action-btn" onclick="window.sidePanelController.previewMedia('${item.src || item.url}')" title="预览">👁️</button>
-                <button class="media-action-btn" onclick="window.sidePanelController.downloadMedia('${item.src || item.url}')" title="下载">⬇️</button>
-                <button class="media-action-btn" onclick="window.sidePanelController.copyMediaUrl('${item.src || item.url}')" title="复制链接">📋</button>
+                <button class="media-action-btn preview-btn" data-url="${item.src || item.url}" title="预览">👁️</button>
+                <button class="media-action-btn download-btn" data-url="${item.src || item.url}" title="下载">⬇️</button>
+                <button class="media-action-btn copy-btn" data-url="${item.src || item.url}" title="复制链接">📋</button>
             </div>
         `;
+        
+        // 添加图片错误处理
+        const img = div.querySelector('.media-preview');
+        img.addEventListener('error', function() {
+            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNiAxNkgyNFYyNEgxNlYxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+        });
+        
+        // 添加按钮事件监听器
+        const previewBtn = div.querySelector('.preview-btn');
+        const downloadBtn = div.querySelector('.download-btn');
+        const copyBtn = div.querySelector('.copy-btn');
+        
+        previewBtn.addEventListener('click', () => {
+            this.previewMedia(previewBtn.dataset.url);
+        });
+        
+        downloadBtn.addEventListener('click', () => {
+            this.downloadMedia(downloadBtn.dataset.url);
+        });
+        
+        copyBtn.addEventListener('click', () => {
+            this.copyMediaUrl(copyBtn.dataset.url);
+        });
+        
         return div;
     }
     
@@ -748,16 +772,26 @@ class SidePanelController {
     }
     
     getFileSize(size) {
-        if (!size) return '未知大小';
+        // 处理非数字类型的size
+        if (size === null || size === undefined || size === 'unknown' || typeof size !== 'number' || isNaN(size)) {
+            return '未知大小';
+        }
+        
+        // 处理0值
+        if (size === 0) {
+            return '0.0 B';
+        }
         
         const units = ['B', 'KB', 'MB', 'GB'];
         let index = 0;
-        while (size >= 1024 && index < units.length - 1) {
-            size /= 1024;
+        let sizeValue = size;
+        
+        while (sizeValue >= 1024 && index < units.length - 1) {
+            sizeValue /= 1024;
             index++;
         }
         
-        return `${size.toFixed(1)} ${units[index]}`;
+        return `${sizeValue.toFixed(1)} ${units[index]}`;
     }
     
     /**

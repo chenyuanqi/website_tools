@@ -25,6 +25,7 @@ const MESSAGE_TYPES = {
     
     // 链接管理相关
     ENABLE_NEW_TAB_MODE: 'enableNewTabMode',
+    ENABLE_TARGET_BLANK_MODE: 'enableTargetBlankMode',
     ENABLE_PREVIEW_MODE: 'enablePreviewMode',
     GET_LINK_STATS: 'getLinkStats',
     
@@ -232,10 +233,11 @@ class PopupController {
     }
     
     /**
-     * 更新链接管理功能按钮状态
+     * 更新链接管理按钮状态
      */
     updateLinkManagerButtons() {
         const newTabButton = document.getElementById('newTabMode');
+        const targetBlankButton = document.getElementById('targetBlankMode');
         const previewButton = document.getElementById('previewMode');
         
         if (newTabButton) {
@@ -243,6 +245,14 @@ class PopupController {
                 this.setButtonActive(newTabButton);
             } else {
                 this.setButtonInactive(newTabButton);
+            }
+        }
+        
+        if (targetBlankButton) {
+            if (this.settings.linkManager?.targetBlankMode) {
+                this.setButtonActive(targetBlankButton);
+            } else {
+                this.setButtonInactive(targetBlankButton);
             }
         }
         
@@ -297,6 +307,10 @@ class PopupController {
         // 链接管理功能按钮
         document.getElementById('newTabMode')?.addEventListener('click', () => {
             this.toggleNewTabMode();
+        });
+        
+        document.getElementById('targetBlankMode')?.addEventListener('click', () => {
+            this.toggleTargetBlankMode();
         });
         
         document.getElementById('previewMode')?.addEventListener('click', () => {
@@ -438,6 +452,39 @@ class PopupController {
             
         } catch (error) {
             console.error('[弹出窗口] 切换新标签页模式失败:', error);
+            this.showError('操作失败，请重试');
+        }
+    }
+    
+    /**
+     * 切换Target属性模式
+     */
+    async toggleTargetBlankMode() {
+        try {
+            const button = document.getElementById('targetBlankMode');
+            const isEnabled = !this.settings.linkManager?.targetBlankMode;
+            
+            this.settings.linkManager = this.settings.linkManager || {};
+            this.settings.linkManager.targetBlankMode = isEnabled;
+            
+            await chrome.storage.sync.set({ websiteToolsSettings: this.settings });
+            
+            // 发送消息给content script
+            if (this.currentTab?.id) {
+                await chrome.tabs.sendMessage(this.currentTab.id, {
+                    type: 'ENABLE_TARGET_BLANK_MODE',
+                    data: { enabled: isEnabled }
+                });
+                console.log('[弹出窗口] 已发送Target属性模式消息:', isEnabled);
+            }
+            
+            // 更新按钮状态
+            this.updateLinkManagerButtons();
+            
+            this.showSuccess(`Target属性模式已${isEnabled ? '启用' : '禁用'}`);
+            
+        } catch (error) {
+            console.error('[弹出窗口] 切换Target属性模式失败:', error);
             this.showError('操作失败，请重试');
         }
     }

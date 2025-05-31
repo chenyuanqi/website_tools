@@ -42,6 +42,12 @@ if (window.websiteToolsSimpleInjected) {
                     enableNewTabMode(true);
                 }
                 
+                // 检查Target属性模式
+                if (settings.linkManager.targetBlankMode) {
+                    console.log('[网页工具-简化版] 自动启用Target属性模式');
+                    enableTargetBlankMode(true);
+                }
+                
                 // 检查预览功能
                 if (settings.linkManager.popupPreview) {
                     console.log('[网页工具-简化版] 自动启用预览功能');
@@ -196,6 +202,12 @@ if (window.websiteToolsSimpleInjected) {
                 case 'ENABLE_PREVIEW_MODE':
                 case 'enablePreviewMode':
                     enablePreviewMode(data?.enabled !== false);
+                    sendResponse({ success: true });
+                    break;
+                    
+                case 'ENABLE_TARGET_BLANK_MODE':
+                case 'enableTargetBlankMode':
+                    enableTargetBlankMode(data?.enabled !== false);
                     sendResponse({ success: true });
                     break;
                     
@@ -793,9 +805,9 @@ if (window.websiteToolsSimpleInjected) {
                     id: index + 1,
                     src: img.src,
                     alt: img.alt || '图片',
-                    width: img.naturalWidth || img.width,
-                    height: img.naturalHeight || img.height,
-                    size: 'unknown'
+                    width: img.naturalWidth || img.width || 0,
+                    height: img.naturalHeight || img.height || 0,
+                    size: 0 // 初始化为0，表示未知大小
                 });
             }
         });
@@ -812,9 +824,9 @@ if (window.websiteToolsSimpleInjected) {
                         id: images.length + 1,
                         src: match[1],
                         alt: '背景图片',
-                        width: 'unknown',
-                        height: 'unknown',
-                        size: 'unknown'
+                        width: 0,
+                        height: 0,
+                        size: 0
                     });
                 }
             }
@@ -836,9 +848,10 @@ if (window.websiteToolsSimpleInjected) {
                     videos.push({
                         id: index + 1,
                         src: src,
-                        duration: video.duration || 'unknown',
-                        width: video.videoWidth || video.width,
-                        height: video.videoHeight || video.height
+                        duration: video.duration || 0,
+                        width: video.videoWidth || video.width || 0,
+                        height: video.videoHeight || video.height || 0,
+                        size: 0 // 初始化为0，表示未知大小
                     });
                 }
             }
@@ -860,7 +873,8 @@ if (window.websiteToolsSimpleInjected) {
                     audio.push({
                         id: index + 1,
                         src: src,
-                        duration: audioElement.duration || 'unknown'
+                        duration: audioElement.duration || 0,
+                        size: 0 // 初始化为0，表示未知大小
                     });
                 }
             }
@@ -879,7 +893,7 @@ if (window.websiteToolsSimpleInjected) {
             newTabMode = true;
             
             // 添加外部链接样式
-            addExternalLinkStyles();
+            addLinkStyles();
             
             // 标记外部链接
             markExternalLinks();
@@ -890,7 +904,7 @@ if (window.websiteToolsSimpleInjected) {
             console.log('[网页工具-简化版] 增强版新标签页模式已启用');
         } else {
             newTabMode = false;
-            removeExternalLinkStyles();
+            removeLinkStyles();
             // 移除新标签页相关的事件监听器
             if (window._websiteToolsClickHandler) {
                 document.removeEventListener('click', window._websiteToolsClickHandler, true);
@@ -1050,13 +1064,13 @@ if (window.websiteToolsSimpleInjected) {
     }
     
     /**
-     * 添加外部链接样式
+     * 添加链接样式
      */
-    function addExternalLinkStyles() {
-        if (document.getElementById('website-tools-external-styles')) return;
+    function addLinkStyles() {
+        if (document.getElementById('website-tools-link-styles')) return;
         
         const style = document.createElement('style');
-        style.id = 'website-tools-external-styles';
+        style.id = 'website-tools-link-styles';
         style.textContent = `
             .website-tools-external {
                 position: relative;
@@ -1072,15 +1086,30 @@ if (window.websiteToolsSimpleInjected) {
                 opacity: 1;
                 color: #0056b3;
             }
+            
+            .website-tools-internal {
+                position: relative;
+            }
+            .website-tools-internal::after {
+                content: "🔗";
+                font-size: 0.8em;
+                color: #28a745;
+                margin-left: 3px;
+                opacity: 0.8;
+            }
+            .website-tools-internal:hover::after {
+                opacity: 1;
+                color: #1e7e34;
+            }
         `;
         document.head.appendChild(style);
     }
     
     /**
-     * 移除外部链接样式
+     * 移除链接样式
      */
-    function removeExternalLinkStyles() {
-        const style = document.getElementById('website-tools-external-styles');
+    function removeLinkStyles() {
+        const style = document.getElementById('website-tools-link-styles');
         if (style) style.remove();
     }
     
@@ -1464,4 +1493,192 @@ if (window.websiteToolsSimpleInjected) {
     
     // 将调试函数暴露到全局
     window.debugWebsiteTools = debugLinkHandling;
+
+    /**
+     * 启用Target属性模式 - 直接修改链接的target属性
+     */
+    function enableTargetBlankMode(enabled = true) {
+        console.log('[网页工具-简化版] 设置Target属性模式:', enabled);
+        
+        if (enabled) {
+            // 添加外部链接样式
+            addLinkStyles();
+            
+            // 标记所有链接并设置target属性
+            markAllLinksWithTarget();
+            
+            // 监听DOM变化，处理动态添加的链接
+            startTargetBlankObserver();
+            
+            console.log('[网页工具-简化版] Target属性模式已启用');
+        } else {
+            // 移除target属性
+            removeTargetBlankFromLinks();
+            
+            // 停止DOM监听
+            stopTargetBlankObserver();
+            
+            // 移除样式
+            removeLinkStyles();
+            
+            console.log('[网页工具-简化版] Target属性模式已禁用');
+        }
+    }
+    
+    /**
+     * 标记所有链接并设置target属性
+     */
+    function markAllLinksWithTarget() {
+        const currentDomain = window.location.hostname;
+        const links = document.querySelectorAll('a[href]');
+        let externalCount = 0;
+        let internalCount = 0;
+        
+        links.forEach(link => {
+            try {
+                const url = new URL(link.href);
+                const isExternal = url.hostname !== currentDomain;
+                
+                // 处理所有链接，不仅仅是外部链接
+                if (isExternal) {
+                    // 添加外部链接标识
+                    link.classList.add('website-tools-external');
+                    externalCount++;
+                } else {
+                    // 添加内部链接标识
+                    link.classList.add('website-tools-internal');
+                    internalCount++;
+                }
+                
+                // 为所有链接添加target="_blank"属性
+                // 保存原有的target属性
+                if (link.hasAttribute('target')) {
+                    link.setAttribute('data-original-target', link.getAttribute('target'));
+                }
+                
+                // 保存原有的rel属性
+                if (link.hasAttribute('rel')) {
+                    link.setAttribute('data-original-rel', link.getAttribute('rel'));
+                }
+                
+                // 设置target属性
+                link.setAttribute('target', '_blank');
+                
+                // 为外部链接添加安全属性
+                if (isExternal) {
+                    const existingRel = link.getAttribute('rel') || '';
+                    const relParts = existingRel.split(' ').filter(part => part.trim());
+                    if (!relParts.includes('noopener')) relParts.push('noopener');
+                    if (!relParts.includes('noreferrer')) relParts.push('noreferrer');
+                    link.setAttribute('rel', relParts.join(' '));
+                }
+                
+            } catch (e) {
+                // 忽略无效URL
+            }
+        });
+        
+        console.log('[网页工具-简化版] Target模式处理了', externalCount, '个外部链接和', internalCount, '个内部链接');
+    }
+    
+    /**
+     * 移除所有链接的target属性
+     */
+    function removeTargetBlankFromLinks() {
+        // 处理外部链接和内部链接
+        const externalLinks = document.querySelectorAll('a.website-tools-external');
+        const internalLinks = document.querySelectorAll('a.website-tools-internal');
+        const allProcessedLinks = [...externalLinks, ...internalLinks];
+        
+        allProcessedLinks.forEach(link => {
+            // 移除target属性（如果原来没有的话）
+            if (!link.hasAttribute('data-original-target')) {
+                link.removeAttribute('target');
+            } else {
+                // 恢复原来的target值
+                const originalTarget = link.getAttribute('data-original-target');
+                if (originalTarget) {
+                    link.setAttribute('target', originalTarget);
+                } else {
+                    link.removeAttribute('target');
+                }
+                link.removeAttribute('data-original-target');
+            }
+            
+            // 移除rel属性（如果原来没有的话）
+            if (!link.hasAttribute('data-original-rel')) {
+                link.removeAttribute('rel');
+            } else {
+                // 恢复原来的rel值
+                const originalRel = link.getAttribute('data-original-rel');
+                if (originalRel) {
+                    link.setAttribute('rel', originalRel);
+                } else {
+                    link.removeAttribute('rel');
+                }
+                link.removeAttribute('data-original-rel');
+            }
+            
+            // 移除链接标识
+            link.classList.remove('website-tools-external');
+            link.classList.remove('website-tools-internal');
+        });
+        
+        console.log('[网页工具-简化版] 已移除所有Target属性设置，处理了', allProcessedLinks.length, '个链接');
+    }
+    
+    /**
+     * 开始监听DOM变化，处理动态添加的链接
+     */
+    function startTargetBlankObserver() {
+        // 如果已经存在观察器，先停止
+        stopTargetBlankObserver();
+        
+        window._websiteToolsTargetObserver = new MutationObserver((mutations) => {
+            let hasNewLinks = false;
+            
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            // 检查新添加的节点是否是链接或包含链接
+                            if (node.tagName === 'A' && node.href) {
+                                hasNewLinks = true;
+                            } else if (node.querySelectorAll) {
+                                const newLinks = node.querySelectorAll('a[href]');
+                                if (newLinks.length > 0) {
+                                    hasNewLinks = true;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // 如果发现新链接，重新处理
+            if (hasNewLinks) {
+                console.log('[网页工具-简化版] 检测到新链接，重新应用Target属性');
+                markAllLinksWithTarget();
+            }
+        });
+        
+        // 开始观察
+        window._websiteToolsTargetObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        console.log('[网页工具-简化版] Target属性DOM观察器已启动');
+    }
+    
+    /**
+     * 停止DOM观察器
+     */
+    function stopTargetBlankObserver() {
+        if (window._websiteToolsTargetObserver) {
+            window._websiteToolsTargetObserver.disconnect();
+            window._websiteToolsTargetObserver = null;
+            console.log('[网页工具-简化版] Target属性DOM观察器已停止');
+        }
+    }
 } 
