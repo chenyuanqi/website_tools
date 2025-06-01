@@ -268,7 +268,7 @@ console.log('[网页工具-简化版] Content Script 初始化完成');
 function enableFeishuSpecialHandling() {
     console.log('[网页工具-简化版] 启用飞书特殊处理');
     
-    // 飞书可能使用的特殊类名和选择器
+    // 飞书可能使用的特殊类名和选择器 - 扩展更多选择器
     const feishuSelectors = [
         '.docs-reader',
         '.docs-editor',
@@ -277,17 +277,36 @@ function enableFeishuSpecialHandling() {
         '.text-content',
         '[data-testid="doc-content"]',
         '.suite-markdown-container',
-        '.rich-text-container'
+        '.rich-text-container',
+        '.editor-container',
+        '.doc-render',
+        '.doc-body',
+        '.lark-editor',
+        '.lark-content',
+        '.feishu-editor',
+        '.feishu-content',
+        '.document-content',
+        '.editor-content',
+        '.content-wrapper',
+        '.text-wrapper',
+        '.paragraph',
+        '.text-block',
+        '[contenteditable]',
+        '[data-slate-editor]',
+        '.slate-editor'
     ];
     
     // 强制启用这些元素的文本选择
     feishuSelectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
-            element.style.userSelect = 'text !important';
-            element.style.webkitUserSelect = 'text !important';
-            element.style.mozUserSelect = 'text !important';
-            element.style.msUserSelect = 'text !important';
+            // 强制设置样式
+            element.style.userSelect = 'text';
+            element.style.webkitUserSelect = 'text';
+            element.style.mozUserSelect = 'text';
+            element.style.msUserSelect = 'text';
+            element.style.pointerEvents = 'auto';
+            element.style.cursor = 'text';
             
             // 移除所有可能的事件监听器
             element.onselectstart = null;
@@ -295,46 +314,125 @@ function enableFeishuSpecialHandling() {
             element.oncontextmenu = null;
             element.onmousedown = null;
             element.onmouseup = null;
+            element.oncopy = null;
+            element.oncut = null;
+            element.onpaste = null;
             
             // 移除禁用属性
             element.removeAttribute('unselectable');
             element.removeAttribute('onselectstart');
             element.removeAttribute('ondragstart');
+            element.removeAttribute('oncontextmenu');
         });
     });
     
-    // 特殊CSS覆盖飞书的限制
+    // 特殊CSS覆盖飞书的限制 - 更强力的样式
     const feishuStyle = document.createElement('style');
     feishuStyle.id = 'website-tools-feishu-special';
     feishuStyle.textContent = `
-        /* 飞书特殊处理 */
-        .docs-reader *, .docs-editor *, .lark-docs *, .doc-content *,
-        .text-content *, [data-testid="doc-content"] *,
-        .suite-markdown-container *, .rich-text-container * {
+        /* 飞书特殊处理 - 超强力CSS覆盖 */
+        * {
             -webkit-user-select: text !important;
             -moz-user-select: text !important;
             -ms-user-select: text !important;
             user-select: text !important;
             -webkit-touch-callout: default !important;
+            pointer-events: auto !important;
+            cursor: text !important;
         }
         
-        /* 覆盖飞书可能的内联样式 */
-        [style*="user-select: none"] {
+        /* 特别针对飞书元素的强制覆盖 */
+        .docs-reader, .docs-reader *,
+        .docs-editor, .docs-editor *,
+        .lark-docs, .lark-docs *,
+        .doc-content, .doc-content *,
+        .text-content, .text-content *,
+        [data-testid="doc-content"], [data-testid="doc-content"] *,
+        .suite-markdown-container, .suite-markdown-container *,
+        .rich-text-container, .rich-text-container *,
+        .editor-container, .editor-container *,
+        .doc-render, .doc-render *,
+        .doc-body, .doc-body *,
+        .lark-editor, .lark-editor *,
+        .lark-content, .lark-content *,
+        .feishu-editor, .feishu-editor *,
+        .feishu-content, .feishu-content *,
+        .document-content, .document-content *,
+        .editor-content, .editor-content *,
+        .content-wrapper, .content-wrapper *,
+        .text-wrapper, .text-wrapper *,
+        .paragraph, .paragraph *,
+        .text-block, .text-block *,
+        [contenteditable], [contenteditable] *,
+        [data-slate-editor], [data-slate-editor] *,
+        .slate-editor, .slate-editor * {
             -webkit-user-select: text !important;
             -moz-user-select: text !important;
             -ms-user-select: text !important;
             user-select: text !important;
+            -webkit-touch-callout: default !important;
+            pointer-events: auto !important;
+            cursor: text !important;
         }
         
-        /* 确保指针事件正常 */
-        .docs-reader, .docs-editor, .lark-docs, .doc-content,
-        .text-content, [data-testid="doc-content"],
-        .suite-markdown-container, .rich-text-container {
+        /* 覆盖所有可能的内联样式 */
+        [style*="user-select: none"],
+        [style*="user-select:none"],
+        [style*="-webkit-user-select: none"],
+        [style*="-webkit-user-select:none"],
+        [style*="-moz-user-select: none"],
+        [style*="-moz-user-select:none"],
+        [style*="-ms-user-select: none"],
+        [style*="-ms-user-select:none"],
+        [style*="pointer-events: none"],
+        [style*="pointer-events:none"],
+        [style*="cursor: default"],
+        [style*="cursor:default"] {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
             pointer-events: auto !important;
+            cursor: text !important;
+        }
+        
+        /* 强制覆盖所有可能的禁用样式 */
+        [unselectable="on"],
+        [onselectstart],
+        [ondragstart],
+        [oncontextmenu] {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+            pointer-events: auto !important;
+            cursor: text !important;
         }
     `;
     
     document.head.appendChild(feishuStyle);
+    
+    // 清除document级别的限制
+    document.onselectstart = null;
+    document.ondragstart = null;
+    document.oncontextmenu = null;
+    document.onmousedown = null;
+    document.onmouseup = null;
+    document.oncopy = null;
+    document.oncut = null;
+    document.onpaste = null;
+    
+    // 清除body级别的限制
+    if (document.body) {
+        document.body.onselectstart = null;
+        document.body.ondragstart = null;
+        document.body.oncontextmenu = null;
+        document.body.onmousedown = null;
+        document.body.onmouseup = null;
+        document.body.oncopy = null;
+        document.body.oncut = null;
+        document.body.onpaste = null;
+    }
     
     // 覆盖飞书可能使用的全局函数
     if (window.getSelection) {
@@ -343,17 +441,72 @@ function enableFeishuSpecialHandling() {
             try {
                 return originalGetSelection.call(this);
             } catch (e) {
+                console.log('[飞书修复] getSelection被拦截，返回模拟对象');
                 // 如果被阻止，返回一个模拟的Selection对象
                 return {
                     toString: () => '',
                     rangeCount: 0,
                     addRange: () => {},
                     removeAllRanges: () => {},
-                    getRangeAt: () => null
+                    getRangeAt: () => null,
+                    collapse: () => {},
+                    extend: () => {},
+                    selectAllChildren: () => {},
+                    deleteFromDocument: () => {},
+                    anchorNode: null,
+                    anchorOffset: 0,
+                    focusNode: null,
+                    focusOffset: 0,
+                    isCollapsed: false,
+                    type: 'Range'
                 };
             }
         };
     }
+    
+    // 保护execCommand
+    if (document.execCommand) {
+        const originalExecCommand = document.execCommand;
+        document.execCommand = function(command, showUI, value) {
+            try {
+                return originalExecCommand.call(this, command, showUI, value);
+            } catch (e) {
+                console.log(`[飞书修复] execCommand被拦截: ${command}`);
+                return true;
+            }
+        };
+    }
+    
+    // 拦截限制性事件
+    const restrictiveEvents = [
+        'selectstart', 'dragstart', 'contextmenu', 'copy', 'cut', 'paste',
+        'mousedown', 'mouseup', 'keydown', 'keyup', 'keypress'
+    ];
+    
+    restrictiveEvents.forEach(eventType => {
+        document.addEventListener(eventType, function(e) {
+            // 检查是否在飞书相关元素中
+            const target = e.target;
+            const isFeishuElement = feishuSelectors.some(selector => {
+                try {
+                    return target.closest(selector) !== null;
+                } catch (e) {
+                    return false;
+                }
+            });
+            
+            if (isFeishuElement) {
+                console.log(`[飞书修复] 拦截并允许事件: ${eventType}`);
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // 对于复制相关事件，允许默认行为
+                if (['copy', 'cut', 'paste', 'selectstart', 'mousedown', 'mouseup'].includes(eventType)) {
+                    return true;
+                }
+            }
+        }, true); // 使用capture模式确保优先执行
+    });
     
     // 监控飞书可能动态添加的限制
     const feishuObserver = new MutationObserver((mutations) => {
@@ -373,16 +526,32 @@ function enableFeishuSpecialHandling() {
                         });
                     }
                 });
+            } else if (mutation.type === 'attributes') {
+                const target = mutation.target;
+                const isFeishuElement = feishuSelectors.some(selector => {
+                    try {
+                        return target.closest(selector) !== null;
+                    } catch (e) {
+                        return false;
+                    }
+                });
+                
+                if (isFeishuElement) {
+                    // 立即解锁新的限制
+                    removeElementSelectRestrictions(target);
+                }
             }
         });
     });
     
     feishuObserver.observe(document.body, {
         childList: true,
-        subtree: true
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class', 'unselectable', 'onselectstart', 'ondragstart', 'oncontextmenu']
     });
     
-    // 定时强制清理飞书限制
+    // 定时强制清理飞书限制 - 更频繁
     setInterval(() => {
         feishuSelectors.forEach(selector => {
             const elements = document.querySelectorAll(selector);
@@ -390,9 +559,33 @@ function enableFeishuSpecialHandling() {
                 removeElementSelectRestrictions(element);
             });
         });
-    }, 1000); // 每秒清理一次
+        
+        // 清除document和body级别的限制
+        document.onselectstart = null;
+        document.oncontextmenu = null;
+        if (document.body) {
+            document.body.onselectstart = null;
+            document.body.oncontextmenu = null;
+        }
+    }, 500); // 每500毫秒清理一次，更频繁
     
-    console.log('[网页工具-简化版] 飞书特殊处理已启用');
+    // 强制启用contentEditable模式
+    setTimeout(() => {
+        feishuSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                element.contentEditable = 'true';
+                element.style.outline = 'none';
+                
+                // 立即关闭编辑模式，只是为了触发可选择状态
+                setTimeout(() => {
+                    element.contentEditable = 'false';
+                }, 100);
+            });
+        });
+    }, 1000);
+    
+    console.log('[网页工具-简化版] 飞书特殊处理已启用 - 超强力模式');
 }
 
 /**

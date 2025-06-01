@@ -1,18 +1,16 @@
 /**
- * Background Service单元测试
- * 测试消息处理和核心功能
+ * Background Service Worker测试
+ * 测试后台服务的消息处理和功能
  */
 
-import { mockChrome } from '../setup';
-
-// 模拟BackgroundService类（基于实际实现）
+// 模拟Background Service Worker
 class MockBackgroundService {
   private handlers = new Map<string, Function>();
   private downloadQueue = new Map<string, any>();
   private usageStats = {
-    copyFreedom: 0,
-    linkManager: 0,
-    mediaExtractor: 0
+    textSelectionEnabled: 0,
+    imagesExtracted: 0,
+    assetsDownloaded: 0
   };
 
   constructor() {
@@ -21,22 +19,16 @@ class MockBackgroundService {
   }
 
   private setupMessageListener(): void {
-    mockChrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      const handler = this.handlers.get(request.type);
-      if (handler) {
-        try {
-          const result = handler(request, sender);
-          if (result instanceof Promise) {
-            result.then(sendResponse).catch((error) => {
-              sendResponse({ success: false, error: error.message });
-            });
-            return true;
-          } else {
-            sendResponse(result);
-          }
-        } catch (error) {
-          sendResponse({ success: false, error: (error as Error).message });
+    chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+      try {
+        const handler = this.handlers.get(request.type);
+        if (handler) {
+          const result = await handler(request);
+          sendResponse(result);
         }
+      } catch (error) {
+        console.error('Message handler error:', error);
+        sendResponse({ success: false, error: error.message });
       }
     });
   }
@@ -51,18 +43,17 @@ class MockBackgroundService {
   }
 
   private async handleEnableTextSelection(request: any): Promise<any> {
-    const { tabId } = request.data || {};
+    const { tabId } = request.data;
     
-    if (tabId) {
-      await mockChrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          // 模拟启用文本选择的脚本
-          console.log('启用文本选择');
-        }
-      });
-    }
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        // 注入复制自由脚本
+        console.log('Text selection enabled');
+      }
+    });
 
+    this.updateUsageStats('textSelectionEnabled');
     return { success: true };
   }
 
@@ -73,69 +64,63 @@ class MockBackgroundService {
       { src: 'https://example.com/image2.png', alt: 'Image 2' }
     ];
 
-    return { images: mockImages, success: true };
+    this.updateUsageStats('imagesExtracted');
+    return { success: true, images: mockImages };
   }
 
   private async handleDownloadAsset(request: any): Promise<any> {
     const { url, filename } = request.data;
+    const finalFilename = filename || this.getFilenameFromUrl(url);
     
-    if (!url) {
-      throw new Error('URL is required');
-    }
-
-    const downloadId = `download_${Date.now()}`;
-    
-    // 模拟下载
-    const downloadItem = {
-      id: downloadId,
+    const downloadId = await chrome.downloads.download({
       url,
-      filename: filename || this.getFilenameFromUrl(url),
-      state: 'in_progress'
-    };
-
-    this.downloadQueue.set(downloadId, downloadItem);
-
-    // 模拟Chrome下载API
-    await mockChrome.downloads.download({
-      url,
-      filename: downloadItem.filename
+      filename: finalFilename
     });
 
-    return { success: true, downloadId };
+    // 添加到下载队列
+    this.downloadQueue.set(downloadId.toString(), {
+      id: downloadId,
+      url,
+      filename: finalFilename,
+      status: 'in_progress',
+      startTime: Date.now()
+    });
+
+    this.updateUsageStats('assetsDownloaded');
+    return { 
+      success: true, 
+      downloadId: downloadId.toString()
+    };
   }
 
   private async handleGetSettings(request: any): Promise<any> {
-    const result = await mockChrome.storage.sync.get(['websiteToolsSettings']);
-    return {
-      settings: result.websiteToolsSettings || {},
-      success: true
-    };
+    const result = await chrome.storage.sync.get(['websiteToolsSettings']);
+    const settings = result.websiteToolsSettings || {};
+    
+    return { success: true, settings };
   }
 
   private async handleUpdateSettings(request: any): Promise<any> {
     const { settings } = request.data;
     
-    await mockChrome.storage.sync.set({
+    await chrome.storage.sync.set({
       websiteToolsSettings: settings
     });
-
+    
     return { success: true };
   }
 
   private async handleSelectionUnlockEnabled(request: any): Promise<any> {
     const { url, host } = request.data;
-    console.log('[Background] 文本选择解锁已启用:', host);
     
-    // 更新统计
-    this.updateUsageStats('copyFreedom');
+    // 更新相关标签页的徽章
+    const tabs = await chrome.tabs.query({ url: `*://${host}/*` });
     
-    // 更新徽章状态
-    const tabs = await mockChrome.tabs.query({ url: `*://${host}/*` });
-    tabs.forEach(tab => {
+    for (const tab of tabs) {
       if (tab.id) {
-        this.updateBadgeForHost(tab.id, host, true);
+        await this.updateBadgeForHost(tab.id, host, true);
       }
-    });
+    }
     
     return { success: true };
   }
@@ -147,14 +132,14 @@ class MockBackgroundService {
   }
 
   private async updateBadgeForHost(tabId: number, host: string, enabled: boolean): Promise<void> {
-    await mockChrome.action.setBadgeText({
+    await chrome.action.setBadgeText({
       tabId,
       text: enabled ? '✓' : ''
     });
-
-    await mockChrome.action.setBadgeBackgroundColor({
+    
+    await chrome.action.setBadgeBackgroundColor({
       tabId,
-      color: enabled ? '#4CAF50' : '#FF5722'
+      color: enabled ? '#4CAF50' : '#757575'
     });
   }
 
@@ -164,27 +149,33 @@ class MockBackgroundService {
       const pathname = urlObj.pathname;
       const filename = pathname.split('/').pop() || 'download';
       
-      // 如果没有扩展名，根据URL猜测
+      // 如果没有扩展名，使用.bin作为默认扩展名
       if (!filename.includes('.')) {
-        const contentType = this.guessContentType(url);
-        return `${filename}.${contentType}`;
+        return `${filename}.bin`;
       }
       
       return filename;
-    } catch {
+    } catch (error) {
       return 'download.bin';
     }
   }
 
   private guessContentType(url: string): string {
-    if (url.includes('image') || /\.(jpg|jpeg|png|gif|webp)/.test(url)) {
-      return 'jpg';
-    } else if (url.includes('video') || /\.(mp4|webm|avi)/.test(url)) {
-      return 'mp4';
-    } else if (url.includes('audio') || /\.(mp3|wav|ogg)/.test(url)) {
-      return 'mp3';
-    }
-    return 'bin';
+    const extension = url.split('.').pop()?.toLowerCase();
+    
+    const mimeTypes: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav'
+    };
+    
+    return mimeTypes[extension || ''] || 'application/octet-stream';
   }
 
   public getUsageStats() {
@@ -204,13 +195,13 @@ describe('BackgroundService', () => {
     jest.clearAllMocks();
     
     // 模拟Chrome API
-    mockChrome.downloads.download.mockResolvedValue({ id: 1 });
-    mockChrome.storage.sync.get.mockResolvedValue({});
-    mockChrome.storage.sync.set.mockResolvedValue(undefined);
-    mockChrome.tabs.query.mockResolvedValue([{ id: 1 }]);
-    mockChrome.scripting.executeScript.mockResolvedValue([]);
-    mockChrome.action.setBadgeText.mockResolvedValue(undefined);
-    mockChrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
+    chrome.downloads.download.mockResolvedValue({ id: 1 });
+    chrome.storage.sync.get.mockResolvedValue({});
+    chrome.storage.sync.set.mockResolvedValue(undefined);
+    chrome.tabs.query.mockResolvedValue([{ id: 1 }]);
+    chrome.scripting.executeScript.mockResolvedValue([]);
+    chrome.action.setBadgeText.mockResolvedValue(undefined);
+    chrome.action.setBadgeBackgroundColor.mockResolvedValue(undefined);
 
     // 创建服务实例
     backgroundService = new MockBackgroundService();
@@ -218,11 +209,11 @@ describe('BackgroundService', () => {
 
   describe('消息处理', () => {
     test('应该注册消息监听器', () => {
-      expect(mockChrome.runtime.onMessage.addListener).toHaveBeenCalled();
+      expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
     });
 
     test('应该处理ENABLE_TEXT_SELECTION消息', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -231,7 +222,7 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(mockChrome.scripting.executeScript).toHaveBeenCalledWith({
+      expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
         target: { tabId: 1 },
         func: expect.any(Function)
       });
@@ -239,7 +230,7 @@ describe('BackgroundService', () => {
     });
 
     test('应该处理EXTRACT_IMAGES消息', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -257,7 +248,7 @@ describe('BackgroundService', () => {
     });
 
     test('应该处理DOWNLOAD_ASSET消息', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -272,7 +263,7 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith({
+      expect(chrome.downloads.download).toHaveBeenCalledWith({
         url: 'https://example.com/image.jpg',
         filename: 'test-image.jpg'
       });
@@ -284,11 +275,11 @@ describe('BackgroundService', () => {
 
     test('应该处理GET_SETTINGS消息', async () => {
       const mockSettings = { copyFreedom: { enabled: true } };
-      mockChrome.storage.sync.get.mockResolvedValue({ 
+      chrome.storage.sync.get.mockResolvedValue({ 
         websiteToolsSettings: mockSettings 
       });
 
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -297,7 +288,7 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(mockChrome.storage.sync.get).toHaveBeenCalledWith(['websiteToolsSettings']);
+      expect(chrome.storage.sync.get).toHaveBeenCalledWith(['websiteToolsSettings']);
       expect(sendResponse).toHaveBeenCalledWith({
         settings: mockSettings,
         success: true
@@ -307,7 +298,7 @@ describe('BackgroundService', () => {
     test('应该处理UPDATE_SETTINGS消息', async () => {
       const newSettings = { copyFreedom: { enabled: false } };
 
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -319,14 +310,14 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(mockChrome.storage.sync.set).toHaveBeenCalledWith({
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
         websiteToolsSettings: newSettings
       });
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
 
     test('应该处理SELECTION_UNLOCK_ENABLED消息', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -338,8 +329,8 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(mockChrome.tabs.query).toHaveBeenCalledWith({ url: '*://example.com/*' });
-      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
+      expect(chrome.tabs.query).toHaveBeenCalledWith({ url: '*://example.com/*' });
+      expect(chrome.action.setBadgeText).toHaveBeenCalledWith({
         tabId: 1,
         text: '✓'
       });
@@ -347,7 +338,7 @@ describe('BackgroundService', () => {
     });
 
     test('应该处理未知消息类型', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -363,7 +354,7 @@ describe('BackgroundService', () => {
 
   describe('下载功能', () => {
     test('应该正确处理下载请求', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -384,7 +375,7 @@ describe('BackgroundService', () => {
     });
 
     test('应该从URL生成文件名', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -396,35 +387,173 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith({
+      expect(chrome.downloads.download).toHaveBeenCalledWith({
         url: 'https://example.com/path/to/image.png',
         filename: 'image.png'
       });
     });
 
-    test('应该为无扩展名的URL猜测文件类型', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+    test('应该处理没有扩展名的URL', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
         { 
           type: 'DOWNLOAD_ASSET',
-          data: { url: 'https://example.com/image/12345' }
+          data: { url: 'https://example.com/download' }
         },
         {},
         sendResponse
       );
 
-      expect(mockChrome.downloads.download).toHaveBeenCalledWith({
-        url: 'https://example.com/image/12345',
-        filename: '12345.jpg' // 应该根据URL中的'image'猜测为jpg
+      expect(chrome.downloads.download).toHaveBeenCalledWith({
+        url: 'https://example.com/download',
+        filename: 'download.bin'
+      });
+    });
+  });
+
+  describe('设置管理', () => {
+    test('应该保存设置到sync存储', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      const settings = {
+        copyFreedom: { enabled: true, whitelist: ['example.com'] },
+        linkManager: { newTabForExternal: true }
+      };
+
+      await messageHandler(
+        { 
+          type: 'UPDATE_SETTINGS',
+          data: { settings }
+        },
+        {},
+        sendResponse
+      );
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        websiteToolsSettings: settings
       });
     });
 
-    test('应该处理下载错误', async () => {
-      mockChrome.downloads.download.mockRejectedValue(new Error('Download failed'));
+    test('应该从sync存储读取设置', async () => {
+      const mockSettings = {
+        copyFreedom: { enabled: false },
+        linkManager: { newTabForExternal: false }
+      };
 
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      chrome.storage.sync.get.mockResolvedValue({
+        websiteToolsSettings: mockSettings
+      });
+
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { type: 'GET_SETTINGS' },
+        {},
+        sendResponse
+      );
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        settings: mockSettings
+      });
+    });
+
+    test('应该处理空设置', async () => {
+      chrome.storage.sync.get.mockResolvedValue({});
+
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { type: 'GET_SETTINGS' },
+        {},
+        sendResponse
+      );
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        settings: {}
+      });
+    });
+  });
+
+  describe('徽章管理', () => {
+    test('应该为启用的域名设置徽章', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { 
+          type: 'SELECTION_UNLOCK_ENABLED',
+          data: { url: 'https://example.com', host: 'example.com' }
+        },
+        {},
+        sendResponse
+      );
+
+      expect(chrome.action.setBadgeText).toHaveBeenCalledWith({
+        tabId: 1,
+        text: '✓'
+      });
+
+      expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+        tabId: 1,
+        color: '#4CAF50'
+      });
+    });
+
+    test('应该查询相关标签页', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { 
+          type: 'SELECTION_UNLOCK_ENABLED',
+          data: { url: 'https://test.com', host: 'test.com' }
+        },
+        {},
+        sendResponse
+      );
+
+      expect(chrome.tabs.query).toHaveBeenCalledWith({ url: '*://test.com/*' });
+    });
+  });
+
+  describe('使用统计', () => {
+    test('应该记录文本选择启用次数', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { type: 'ENABLE_TEXT_SELECTION', data: { tabId: 1 } },
+        {},
+        sendResponse
+      );
+
+      const stats = backgroundService.getUsageStats();
+      expect(stats.textSelectionEnabled).toBe(1);
+    });
+
+    test('应该记录图片提取次数', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { type: 'EXTRACT_IMAGES' },
+        {},
+        sendResponse
+      );
+
+      const stats = backgroundService.getUsageStats();
+      expect(stats.imagesExtracted).toBe(1);
+    });
+
+    test('应该记录资源下载次数', async () => {
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -436,82 +565,81 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: false,
-        error: 'Download failed'
-      });
-    });
-
-    test('应该验证下载URL', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      await messageHandler(
-        { 
-          type: 'DOWNLOAD_ASSET',
-          data: {} // 缺少URL
-        },
-        {},
-        sendResponse
-      );
-
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: false,
-        error: 'URL is required'
-      });
-    });
-  });
-
-  describe('徽章管理', () => {
-    test('应该为启用的功能设置徽章', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      await messageHandler(
-        { 
-          type: 'SELECTION_UNLOCK_ENABLED',
-          data: { url: 'https://example.com', host: 'example.com' }
-        },
-        {},
-        sendResponse
-      );
-
-      expect(mockChrome.action.setBadgeText).toHaveBeenCalledWith({
-        tabId: 1,
-        text: '✓'
-      });
-      expect(mockChrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
-        tabId: 1,
-        color: '#4CAF50'
-      });
-    });
-  });
-
-  describe('使用统计', () => {
-    test('应该更新功能使用统计', async () => {
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      // 触发复制自由功能
-      await messageHandler(
-        { 
-          type: 'SELECTION_UNLOCK_ENABLED',
-          data: { url: 'https://example.com', host: 'example.com' }
-        },
-        {},
-        sendResponse
-      );
-
       const stats = backgroundService.getUsageStats();
-      expect(stats.copyFreedom).toBe(1);
+      expect(stats.assetsDownloaded).toBe(1);
     });
   });
 
-  describe('设置管理', () => {
-    test('应该返回默认设置当存储为空时', async () => {
-      mockChrome.storage.sync.get.mockResolvedValue({});
+  describe('文件类型检测', () => {
+    test('应该正确检测图片类型', () => {
+      const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      
+      imageExtensions.forEach(ext => {
+        const url = `https://example.com/image.${ext}`;
+        const contentType = (backgroundService as any).guessContentType(url);
+        expect(contentType).toMatch(/^image\//);
+      });
+    });
 
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+    test('应该正确检测视频类型', () => {
+      const videoExtensions = ['mp4', 'webm'];
+      
+      videoExtensions.forEach(ext => {
+        const url = `https://example.com/video.${ext}`;
+        const contentType = (backgroundService as any).guessContentType(url);
+        expect(contentType).toMatch(/^video\//);
+      });
+    });
+
+    test('应该正确检测音频类型', () => {
+      const audioExtensions = ['mp3', 'wav'];
+      
+      audioExtensions.forEach(ext => {
+        const url = `https://example.com/audio.${ext}`;
+        const contentType = (backgroundService as any).guessContentType(url);
+        expect(contentType).toMatch(/^audio\//);
+      });
+    });
+
+    test('应该为未知类型返回默认值', () => {
+      const unknownUrl = 'https://example.com/file.unknown';
+      const contentType = (backgroundService as any).guessContentType(unknownUrl);
+      expect(contentType).toBe('application/octet-stream');
+    });
+  });
+
+  describe('错误处理', () => {
+    test('应该处理消息处理器中的同步错误', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      // 模拟处理器抛出错误
+      chrome.scripting.executeScript.mockRejectedValue(new Error('Script execution failed'));
+
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      await messageHandler(
+        { type: 'ENABLE_TEXT_SELECTION', data: { tabId: 1 } },
+        {},
+        sendResponse
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith('Message handler error:', expect.any(Error));
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'Script execution failed'
+      });
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('应该处理消息处理器中的异步错误', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      // 模拟存储操作失败
+      chrome.storage.sync.get.mockRejectedValue(new Error('Storage error'));
+
+      const messageHandler = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       await messageHandler(
@@ -520,136 +648,13 @@ describe('BackgroundService', () => {
         sendResponse
       );
 
-      expect(sendResponse).toHaveBeenCalledWith({
-        settings: {},
-        success: true
-      });
-    });
-
-    test('应该正确保存设置', async () => {
-      const newSettings = {
-        copyFreedom: { enabled: true, whitelist: ['example.com'] },
-        linkManager: { newTabForExternal: true }
-      };
-
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      await messageHandler(
-        { 
-          type: 'UPDATE_SETTINGS',
-          data: { settings: newSettings }
-        },
-        {},
-        sendResponse
-      );
-
-      expect(mockChrome.storage.sync.set).toHaveBeenCalledWith({
-        websiteToolsSettings: newSettings
-      });
-    });
-
-    test('应该处理设置保存错误', async () => {
-      mockChrome.storage.sync.set.mockRejectedValue(new Error('Storage error'));
-
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      await messageHandler(
-        { 
-          type: 'UPDATE_SETTINGS',
-          data: { settings: {} }
-        },
-        {},
-        sendResponse
-      );
-
+      expect(consoleSpy).toHaveBeenCalledWith('Message handler error:', expect.any(Error));
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
         error: 'Storage error'
       });
-    });
-  });
-
-  describe('文件类型检测', () => {
-    test('应该正确检测图片类型', () => {
-      const service = backgroundService as any;
       
-      expect(service.guessContentType('https://example.com/image.jpg')).toBe('jpg');
-      expect(service.guessContentType('https://example.com/photo.png')).toBe('jpg');
-      expect(service.guessContentType('https://example.com/image/123')).toBe('jpg');
-    });
-
-    test('应该正确检测视频类型', () => {
-      const service = backgroundService as any;
-      
-      expect(service.guessContentType('https://example.com/video.mp4')).toBe('mp4');
-      expect(service.guessContentType('https://example.com/movie.webm')).toBe('mp4');
-      expect(service.guessContentType('https://example.com/video/456')).toBe('mp4');
-    });
-
-    test('应该正确检测音频类型', () => {
-      const service = backgroundService as any;
-      
-      expect(service.guessContentType('https://example.com/audio.mp3')).toBe('mp3');
-      expect(service.guessContentType('https://example.com/song.wav')).toBe('mp3');
-      expect(service.guessContentType('https://example.com/audio/789')).toBe('mp3');
-    });
-
-    test('应该为未知类型返回默认值', () => {
-      const service = backgroundService as any;
-      
-      expect(service.guessContentType('https://example.com/document.pdf')).toBe('bin');
-      expect(service.guessContentType('https://example.com/unknown')).toBe('bin');
-    });
-  });
-
-  describe('错误处理', () => {
-    test('应该处理消息处理器中的同步错误', async () => {
-      // 模拟一个会抛出错误的处理器
-      const service = backgroundService as any;
-      service.handlers.set('ERROR_TEST', () => {
-        throw new Error('Test error');
-      });
-
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      await messageHandler(
-        { type: 'ERROR_TEST' },
-        {},
-        sendResponse
-      );
-
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: false,
-        error: 'Test error'
-      });
-    });
-
-    test('应该处理消息处理器中的异步错误', async () => {
-      // 模拟一个会返回rejected Promise的处理器
-      const service = backgroundService as any;
-      service.handlers.set('ASYNC_ERROR_TEST', async () => {
-        throw new Error('Async test error');
-      });
-
-      const messageHandler = mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const sendResponse = jest.fn();
-
-      await messageHandler(
-        { type: 'ASYNC_ERROR_TEST' },
-        {},
-        sendResponse
-      );
-
-      // 等待异步错误处理
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: false,
-        error: 'Async test error'
-      });
+      consoleSpy.mockRestore();
     });
   });
 }); 

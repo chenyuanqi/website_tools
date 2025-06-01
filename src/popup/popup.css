@@ -284,19 +284,100 @@ input:checked + .toggle-slider:before {
 
 /* 状态指示器 */
 .status-indicator {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: #f1f3f4;
+    color: #5f6368;
+    font-weight: 500;
+}
+
+.status-indicator.success {
+    background: #e8f5e8;
+    color: #137333;
+}
+
+.status-indicator.error {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.status-indicator.loading {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+/* 主要按钮样式 */
+.action-btn.primary {
+    background: #4285f4;
+    color: white;
+    border-color: #4285f4;
+    font-weight: 500;
+}
+
+.action-btn.primary:hover {
+    background: #3367d6;
+    border-color: #3367d6;
+}
+
+.action-btn.primary:disabled {
+    background: #f1f3f4;
+    color: #9aa0a6;
+    border-color: #dadce0;
+    cursor: not-allowed;
+}
+
+/* 状态消息样式 */
+.status-message {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.status-message.success {
+    background: #e8f5e8;
+    color: #137333;
+    border: 1px solid #c8e6c9;
+}
+
+.status-message.error {
+    background: #fce8e6;
+    color: #d93025;
+    border: 1px solid #ffcdd2;
+}
+
+.status-message.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #bbdefb;
+}
+
+/* 按钮加载状态 */
+.action-btn.loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.action-btn.loading::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid #fff;
     border-radius: 50%;
-    margin-right: 4px;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
 }
 
-.status-indicator.active {
-    background: #10b981;
-}
-
-.status-indicator.inactive {
-    background: #ef4444;
+.action-btn.primary.loading::after {
+    border-color: #fff;
+    border-top-color: transparent;
 }
 
 /* 加载状态 */

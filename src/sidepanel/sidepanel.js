@@ -1,5 +1,5 @@
 /**
- * 元气助手侧边栏逻辑
+ * 元气助手侧边栏逻辑 - 简化版（仅复制破解功能）
  */
 
 class SidePanelController {
@@ -7,11 +7,6 @@ class SidePanelController {
         this.currentTab = null;
         this.settings = null;
         this.pageInfo = null;
-        this.mediaCache = {
-            images: [],
-            videos: [],
-            audio: []
-        };
         
         this.init();
     }
@@ -21,6 +16,8 @@ class SidePanelController {
      */
     async init() {
         try {
+            console.log('[侧边栏] 开始初始化...');
+            
             // 获取当前标签页
             await this.getCurrentTab();
             
@@ -36,13 +33,10 @@ class SidePanelController {
             // 绑定事件
             this.bindEvents();
             
-            // 开始周期性更新
-            this.startPeriodicUpdate();
-            
             console.log('[侧边栏] 初始化完成');
         } catch (error) {
             console.error('[侧边栏] 初始化失败:', error);
-            this.showStatus('初始化失败', 'error');
+            this.showStatus('error', '初始化失败', error.message);
         }
     }
     
@@ -61,13 +55,11 @@ class SidePanelController {
         try {
             const result = await chrome.storage.sync.get(['websiteToolsSettings']);
             this.settings = result.websiteToolsSettings || {
-                linkManager: { enabled: true, newTabForExternal: true, popupPreview: false },
-                copyFreedom: { enabled: true, textSelection: true, rightClickMenu: true, keyboardShortcuts: true },
-                mediaExtractor: { enabled: true, autoDetectImages: true, autoDetectVideos: false, autoDetectAudio: false }
+                copyFreedom: { enabled: true }
             };
         } catch (error) {
             console.error('[侧边栏] 加载设置失败:', error);
-            this.settings = {};
+            this.settings = { copyFreedom: { enabled: true } };
         }
     }
     
@@ -82,69 +74,45 @@ class SidePanelController {
             
             // 检查是否为特殊页面
             if (this.isSpecialPage(this.currentTab.url)) {
-                console.log('[侧边栏] 检测到特殊页面，跳过内容脚本通信:', this.currentTab.url);
                 this.pageInfo = {
                     url: this.currentTab.url,
                     title: this.currentTab.title,
                     domain: this.getDisplayDomain(this.currentTab.url),
-                    hasImages: false,
-                    hasVideos: false,
-                    hasAudio: false,
-                    linkCount: 0,
                     isSpecialPage: true
                 };
                 return;
             }
             
-            // 尝试连接，如果失败则主动注入Content Script
-            const response = await this.tryConnectWithRetry();
-            
-            this.pageInfo = response || {
+            // 普通页面
+            this.pageInfo = {
                 url: this.currentTab.url,
                 title: this.currentTab.title,
                 domain: new URL(this.currentTab.url).hostname,
-                hasImages: false,
-                hasVideos: false,
-                hasAudio: false,
-                linkCount: 0
+                isSpecialPage: false
             };
+            
         } catch (error) {
-            console.error('[侧边栏] 获取页面信息失败:', error);
-            
-            // 如果通信失败，可能是特殊页面或内容脚本未加载
-            const isSpecial = this.isSpecialPage(this.currentTab?.url);
-            
+            console.warn('[侧边栏] 获取页面信息失败:', error);
             this.pageInfo = {
                 url: this.currentTab?.url || '',
                 title: this.currentTab?.title || '',
                 domain: this.getDisplayDomain(this.currentTab?.url),
-                hasImages: false,
-                hasVideos: false,
-                hasAudio: false,
-                linkCount: 0,
-                isSpecialPage: isSpecial,
-                connectionError: !isSpecial // 如果不是特殊页面，则标记为连接错误
+                isSpecialPage: false,
+                connectionError: true
             };
         }
     }
     
     /**
-     * 检查是否为特殊页面（无法注入内容脚本的页面）
+     * 检查是否为特殊页面
      */
     isSpecialPage(url) {
         if (!url) return true;
         
         const specialPagePrefixes = [
-            'chrome://',
-            'chrome-extension://',
-            'moz-extension://',
-            'edge://',
-            'about:',
-            'file://',
-            'data:',
-            'javascript:',
-            'chrome-search://',
-            'chrome-devtools://'
+            'chrome://', 'chrome-extension://', 'moz-extension://',
+            'edge://', 'about:', 'file://', 'data:', 'javascript:',
+            'chrome-search://', 'chrome-devtools://'
         ];
         
         return specialPagePrefixes.some(prefix => url.startsWith(prefix));
@@ -176,14 +144,8 @@ class SidePanelController {
         // 更新页面信息
         this.updatePageInfo();
         
-        // 更新设置状态
-        this.updateSettingsUI();
-        
-        // 更新统计信息
-        this.updateStats();
-        
-        // 显示默认标签页
-        this.showModule('copyFreedom');
+        // 初始化状态
+        this.updateStatus();
     }
     
     /**
@@ -192,6 +154,7 @@ class SidePanelController {
     updatePageInfo() {
         const domainElement = document.getElementById('pageDomain');
         const statusElement = document.getElementById('pageStatus');
+        const currentDomainElement = document.getElementById('currentDomain');
         
         if (domainElement && this.pageInfo) {
             domainElement.textContent = this.pageInfo.domain;
@@ -200,267 +163,90 @@ class SidePanelController {
         
         if (statusElement) {
             if (this.pageInfo?.isSpecialPage) {
-                statusElement.textContent = '不支持的页面';
-                statusElement.style.color = '#f59e0b';
-                statusElement.title = '当前页面不支持扩展功能（浏览器内置页面）';
+                statusElement.textContent = '系统页面';
+                statusElement.style.background = '#fce8e6';
+                statusElement.style.color = '#d93025';
             } else if (this.pageInfo?.connectionError) {
-                statusElement.textContent = '连接失败';
-                statusElement.style.color = '#ef4444';
-                statusElement.title = '无法与页面建立连接，请刷新页面重试';
+                statusElement.textContent = '连接异常';
+                statusElement.style.background = '#fef7e0';
+                statusElement.style.color = '#ea8600';
             } else {
-                statusElement.textContent = '已连接';
-                statusElement.style.color = '#10b981';
-                statusElement.title = '扩展功能正常可用';
+                statusElement.textContent = '就绪';
+                statusElement.style.background = 'rgba(255, 255, 255, 0.2)';
+                statusElement.style.color = 'white';
             }
+        }
+        
+        if (currentDomainElement && this.pageInfo) {
+            currentDomainElement.textContent = this.pageInfo.domain;
         }
     }
     
     /**
-     * 更新设置UI
+     * 更新状态
      */
-    updateSettingsUI() {
-        // 更新主开关
-        const toggles = {
-            'copyFreedomEnabled': this.settings.copyFreedom?.enabled ?? true,
-            'linkManagerEnabled': this.settings.linkManager?.enabled ?? true,
-            'mediaExtractorEnabled': this.settings.mediaExtractor?.enabled ?? true,
-            'textSelectionEnabled': this.settings.copyFreedom?.textSelection ?? true,
-            'rightClickEnabled': this.settings.copyFreedom?.rightClickMenu ?? true,
-            'shortcutsEnabled': this.settings.copyFreedom?.keyboardShortcuts ?? true,
-            'newTabEnabled': this.settings.linkManager?.newTabForExternal ?? true,
-            'previewEnabled': this.settings.linkManager?.popupPreview ?? false
-        };
+    updateStatus() {
+        const statusIndicator = document.getElementById('copyStatus');
+        const footerStatus = document.getElementById('pageStatusFooter');
         
-        Object.entries(toggles).forEach(([id, enabled]) => {
-            const toggle = document.getElementById(id);
-            if (toggle) {
-                toggle.checked = enabled;
+        if (statusIndicator) {
+            if (this.pageInfo?.isSpecialPage) {
+                statusIndicator.className = 'status-indicator error';
+                statusIndicator.textContent = '系统页面';
+            } else {
+                statusIndicator.className = 'status-indicator';
+                statusIndicator.textContent = '未启用';
             }
-        });
-    }
-    
-    /**
-     * 更新统计信息
-     */
-    updateStats() {
-        if (!this.pageInfo) return;
+        }
         
-        // 媒体统计
-        this.updateMediaCounts();
-    }
-    
-    /**
-     * 更新媒体计数
-     */
-    updateMediaCounts() {
-        const counts = {
-            imageCount: this.mediaCache.images.length,
-            videoCount: this.mediaCache.videos.length,
-            audioCount: this.mediaCache.audio.length
-        };
-        
-        Object.entries(counts).forEach(([id, count]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = count.toString();
-            }
-        });
+        if (footerStatus) {
+            footerStatus.textContent = this.pageInfo?.isSpecialPage ? '系统页面' : '就绪';
+        }
     }
     
     /**
      * 绑定事件
      */
     bindEvents() {
-        // 头部按钮
-        document.getElementById('refreshBtn')?.addEventListener('click', () => {
-            this.refreshPage();
-        });
-        
-        document.getElementById('settingsBtn')?.addEventListener('click', () => {
-            chrome.runtime.openOptionsPage();
-        });
-        
-        // 标签切换
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const module = e.currentTarget.dataset.module;
-                this.showModule(module);
+        // 一键破解按钮
+        const unlockBtn = document.getElementById('unlockCopyBtn');
+        if (unlockBtn) {
+            unlockBtn.addEventListener('click', () => {
+                this.unlockCopyRestrictions();
             });
-        });
+        }
         
-        // 功能开关
-        this.bindToggleEvents();
+        // 头部按钮
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshPage();
+            });
+        }
         
-        // 功能按钮
-        this.bindActionButtons();
-        
-        // 媒体提取按钮
-        this.bindMediaButtons();
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                chrome.runtime.openOptionsPage();
+            });
+        }
         
         // 页脚按钮
-        this.bindFooterButtons();
-    }
-    
-    /**
-     * 绑定开关事件
-     */
-    bindToggleEvents() {
-        const toggleHandlers = {
-            'copyFreedomEnabled': (enabled) => this.toggleModule('copyFreedom', enabled),
-            'linkManagerEnabled': (enabled) => this.toggleModule('linkManager', enabled),
-            'mediaExtractorEnabled': (enabled) => this.toggleModule('mediaExtractor', enabled),
-            'textSelectionEnabled': (enabled) => this.toggleFeature('copyFreedom', 'textSelection', enabled),
-            'rightClickEnabled': (enabled) => this.toggleFeature('copyFreedom', 'rightClickMenu', enabled),
-            'shortcutsEnabled': (enabled) => this.toggleFeature('copyFreedom', 'keyboardShortcuts', enabled),
-            'newTabEnabled': (enabled) => this.toggleFeature('linkManager', 'newTabForExternal', enabled),
-            'previewEnabled': (enabled) => this.toggleFeature('linkManager', 'popupPreview', enabled)
-        };
-        
-        Object.entries(toggleHandlers).forEach(([id, handler]) => {
-            const toggle = document.getElementById(id);
-            if (toggle) {
-                toggle.addEventListener('change', (e) => {
-                    handler(e.target.checked);
-                });
-            }
-        });
-    }
-    
-    /**
-     * 绑定功能按钮事件
-     */
-    bindActionButtons() {
-        // 复制自由功能
-        document.getElementById('enableTextSelectionBtn')?.addEventListener('click', () => {
-            this.executeFeature('enableTextSelection');
-        });
-        
-        document.getElementById('restoreRightClickBtn')?.addEventListener('click', () => {
-            this.executeFeature('restoreRightClick');
-        });
-        
-        document.getElementById('restoreShortcutsBtn')?.addEventListener('click', () => {
-            this.executeFeature('restoreShortcuts');
-        });
-    }
-    
-    /**
-     * 绑定媒体按钮事件
-     */
-    bindMediaButtons() {
-        document.getElementById('extractImagesBtn')?.addEventListener('click', () => {
-            this.extractMedia('images');
-        });
-        
-        document.getElementById('extractVideosBtn')?.addEventListener('click', () => {
-            this.extractMedia('videos');
-        });
-        
-        document.getElementById('extractAudioBtn')?.addEventListener('click', () => {
-            this.extractMedia('audio');
-        });
-        
-        // 批量操作
-        document.getElementById('selectAllBtn')?.addEventListener('click', () => {
-            this.selectAllMedia();
-        });
-        
-        document.getElementById('downloadSelectedBtn')?.addEventListener('click', () => {
-            this.downloadSelectedMedia();
-        });
-        
-        document.getElementById('clearListBtn')?.addEventListener('click', () => {
-            this.clearMediaList();
-        });
-    }
-    
-    /**
-     * 绑定页脚按钮事件
-     */
-    bindFooterButtons() {
-        document.getElementById('exportSettingsBtn')?.addEventListener('click', () => {
-            this.exportSettings();
-        });
-        
-        document.getElementById('importSettingsBtn')?.addEventListener('click', () => {
-            this.importSettings();
-        });
-        
-        document.getElementById('helpBtn')?.addEventListener('click', () => {
-            this.showHelp();
-        });
-    }
-    
-    /**
-     * 显示指定模块
-     */
-    showModule(moduleName) {
-        // 更新标签状态
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.module === moduleName);
-        });
-        
-        // 显示对应面板
-        document.querySelectorAll('.module-panel').forEach(panel => {
-            panel.classList.toggle('active', panel.id === moduleName + 'Panel');
-        });
-        
-        // 特殊处理
-        if (moduleName === 'mediaExtractor') {
-            this.updateMediaCounts();
+        const refreshPageBtn = document.getElementById('refreshPageBtn');
+        if (refreshPageBtn) {
+            refreshPageBtn.addEventListener('click', () => {
+                this.refreshPage();
+            });
         }
     }
     
     /**
-     * 切换模块
+     * 一键破解复制限制
      */
-    async toggleModule(module, enabled) {
-        try {
-            this.settings[module].enabled = enabled;
-            await this.saveSettings();
-            
-            // 发送消息给content script
-            if (this.currentTab?.id) {
-                await chrome.tabs.sendMessage(this.currentTab.id, {
-                    type: 'UPDATE_SETTINGS',
-                    data: this.settings
-                });
-            }
-            
-            this.showStatus(`${this.getModuleName(module)}已${enabled ? '启用' : '禁用'}`);
-        } catch (error) {
-            console.error('[侧边栏] 切换模块失败:', error);
-            this.showStatus('操作失败', 'error');
-        }
-    }
-    
-    /**
-     * 切换功能特性
-     */
-    async toggleFeature(module, feature, enabled) {
-        try {
-            this.settings[module][feature] = enabled;
-            await this.saveSettings();
-            
-            // 发送消息给content script
-            if (this.currentTab?.id) {
-                await chrome.tabs.sendMessage(this.currentTab.id, {
-                    type: 'UPDATE_SETTINGS',
-                    data: this.settings
-                });
-            }
-            
-            this.showStatus(`${feature}已${enabled ? '启用' : '禁用'}`);
-        } catch (error) {
-            console.error('[侧边栏] 切换功能失败:', error);
-            this.showStatus('操作失败', 'error');
-        }
-    }
-    
-    /**
-     * 执行功能
-     */
-    async executeFeature(action) {
+    async unlockCopyRestrictions() {
+        const button = document.getElementById('unlockCopyBtn');
+        const statusIndicator = document.getElementById('copyStatus');
+        
         try {
             if (!this.currentTab?.id) {
                 throw new Error('无法获取当前标签页');
@@ -468,232 +254,175 @@ class SidePanelController {
             
             // 检查是否为特殊页面
             if (this.pageInfo?.isSpecialPage) {
-                this.showStatus('当前页面不支持此功能', 'warning');
+                this.showStatus('error', '系统页面', '系统页面无法破解复制限制');
+                this.updateStepStatus('all', 'error', '系统页面');
                 return;
             }
             
-            let messageType;
-            switch (action) {
-                case 'enableTextSelection':
-                    messageType = 'ENABLE_TEXT_SELECTION';
-                    break;
-                case 'restoreRightClick':
-                    messageType = 'RESTORE_RIGHT_CLICK';
-                    break;
-                case 'restoreShortcuts':
-                    messageType = 'RESTORE_SHORTCUTS';
-                    break;
-                default:
-                    throw new Error('未知的操作');
-            }
-            
-            const button = document.getElementById(action + 'Btn');
+            // 设置加载状态
             this.setButtonLoading(button, true);
+            this.updateStatusIndicator('loading', '破解中...');
+            this.hideStatusMessage();
             
-            // 使用重连机制发送消息
+            // 重置所有步骤状态
+            this.resetStepStatus();
+            
+            // 执行破解
             const response = await this.sendMessageWithRetry({
-                type: messageType,
-                data: { enabled: true }
+                type: 'enableTextSelection',
+                data: { 
+                    enabled: true,
+                    mode: 'complete'
+                }
             });
             
-            if (response?.success) {
+            if (response && response.success) {
+                // 破解成功
+                this.updateStatusIndicator('success', '已破解');
+                this.showStatus('success', '破解成功', response.message || '复制限制已成功解除！');
                 this.setButtonSuccess(button);
-                this.showStatus('操作成功');
+                
+                // 更新步骤状态为成功
+                this.updateStepStatus('all', 'success', '已完成');
+                
             } else {
-                throw new Error(response?.error || '操作失败');
+                // 破解失败但有响应
+                const errorMsg = response?.error || response?.message || '破解失败，未知原因';
+                this.updateStatusIndicator('error', '破解失败');
+                this.showStatus('error', '破解失败', this.getDetailedErrorMessage(errorMsg));
+                this.updateStepStatus('all', 'error', '失败');
             }
             
         } catch (error) {
-            console.error('[侧边栏] 执行功能失败:', error);
+            console.error('[侧边栏] 一键破解失败:', error);
             
-            const button = document.getElementById(action + 'Btn');
-            this.setButtonLoading(button, false);
+            // 分析错误类型并提供详细信息
+            let errorType = '连接失败';
+            let errorDetail = '';
             
-            if (error.message.includes('无法建立连接')) {
-                this.showStatus('页面连接失败，已尝试自动修复', 'error');
-                // 标记连接错误
-                if (this.pageInfo) {
-                    this.pageInfo.connectionError = true;
-                    this.updatePageInfo();
-                }
+            if (error.message?.includes('Could not establish connection')) {
+                errorType = '页面连接失败';
+                errorDetail = '页面可能还未加载完成，请刷新页面后重试';
+            } else if (error.message?.includes('Script not found')) {
+                errorType = '脚本未就绪';
+                errorDetail = '破解脚本未加载，请刷新页面后重试';
+            } else if (error.message?.includes('Permission denied')) {
+                errorType = '权限不足';
+                errorDetail = '当前页面限制了扩展权限，无法破解';
+            } else if (this.currentTab?.url?.startsWith('chrome://')) {
+                errorType = '系统页面';
+                errorDetail = 'Chrome系统页面无法破解';
             } else {
-                this.showStatus('操作失败: ' + error.message, 'error');
+                errorDetail = error.message || '请刷新页面后重试，或检查网络连接';
             }
+            
+            this.updateStatusIndicator('error', errorType);
+            this.showStatus('error', errorType, errorDetail);
+            this.updateStepStatus('all', 'error', '失败');
+            
         } finally {
-            // 确保按钮状态被重置
+            this.setButtonLoading(button, false);
+        }
+    }
+    
+    /**
+     * 更新状态指示器
+     */
+    updateStatusIndicator(type, text) {
+        const statusIndicator = document.getElementById('copyStatus');
+        if (statusIndicator) {
+            statusIndicator.className = `status-indicator ${type}`;
+            statusIndicator.textContent = text;
+        }
+    }
+    
+    /**
+     * 显示状态消息
+     */
+    showStatus(type, title, details) {
+        const statusSection = document.getElementById('statusSection');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusDetails = document.getElementById('statusDetails');
+        
+        if (statusSection && statusMessage) {
+            statusMessage.className = `status-message ${type}`;
+            statusSection.style.display = 'block';
+        }
+        
+        if (statusIcon) {
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️',
+                loading: '⏳'
+            };
+            statusIcon.textContent = icons[type] || 'ℹ️';
+        }
+        
+        if (statusTitle) {
+            statusTitle.textContent = title;
+        }
+        
+        if (statusDetails) {
+            statusDetails.textContent = details;
+        }
+        
+        // 成功消息5秒后自动隐藏
+        if (type === 'success') {
             setTimeout(() => {
-                const button = document.getElementById(action + 'Btn');
-                this.setButtonLoading(button, false);
-            }, 1000);
+                this.hideStatusMessage();
+            }, 5000);
         }
     }
     
     /**
-     * 提取媒体
+     * 隐藏状态消息
      */
-    async extractMedia(type) {
-        try {
-            if (!this.currentTab?.id) {
-                throw new Error('无法获取当前标签页');
-            }
-            
-            // 检查是否为特殊页面
-            if (this.pageInfo?.isSpecialPage) {
-                this.showStatus('当前页面不支持此功能', 'warning');
-                return;
-            }
-            
-            const button = document.getElementById(`extract${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
-            this.setButtonLoading(button, true);
-            
-            const messageType = `EXTRACT_${type.toUpperCase()}`;
-            
-            // 使用重连机制发送消息
-            const response = await this.sendMessageWithRetry({
-                type: messageType
-            });
-            
-            if (response && response[type]) {
-                this.mediaCache[type] = response[type];
-                this.updateMediaList(type);
-                this.updateMediaCounts();
-                this.showStatus(`找到${response[type].length}个${this.getMediaTypeName(type)}`);
-            } else {
-                this.showStatus(`未找到${this.getMediaTypeName(type)}`, 'warning');
-            }
-            
-        } catch (error) {
-            console.error('[侧边栏] 提取媒体失败:', error);
-            
-            if (error.message.includes('无法建立连接')) {
-                this.showStatus('页面连接失败，已尝试自动修复', 'error');
-                // 标记连接错误
-                if (this.pageInfo) {
-                    this.pageInfo.connectionError = true;
-                    this.updatePageInfo();
-                }
-            } else {
-                this.showStatus('提取失败: ' + error.message, 'error');
-            }
-        } finally {
-            const button = document.getElementById(`extract${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
-            this.setButtonLoading(button, false);
+    hideStatusMessage() {
+        const statusSection = document.getElementById('statusSection');
+        if (statusSection) {
+            statusSection.style.display = 'none';
         }
     }
     
     /**
-     * 更新媒体列表
+     * 重置步骤状态
      */
-    updateMediaList(type) {
-        const mediaList = document.getElementById('mediaList');
-        const emptyState = document.getElementById('emptyState');
-        const batchActions = document.getElementById('batchActions');
-        
-        if (!mediaList) return;
-        
-        const items = this.mediaCache[type] || [];
-        
-        if (items.length === 0) {
-            emptyState.style.display = 'flex';
-            batchActions.style.display = 'none';
-            return;
+    resetStepStatus() {
+        for (let i = 1; i <= 5; i++) {
+            this.updateStepStatus(i, '', '待执行');
         }
-        
-        emptyState.style.display = 'none';
-        batchActions.style.display = 'flex';
-        
-        // 清空现有内容（保留空状态）
-        const existingItems = mediaList.querySelectorAll('.media-item');
-        existingItems.forEach(item => item.remove());
-        
-        // 添加媒体项
-        items.forEach((item, index) => {
-            const mediaItem = this.createMediaItem(item, index, type);
-            mediaList.appendChild(mediaItem);
-        });
     }
     
     /**
-     * 创建媒体项元素
+     * 更新步骤状态
      */
-    createMediaItem(item, index, type) {
-        const div = document.createElement('div');
-        div.className = 'media-item';
-        div.innerHTML = `
-            <input type="checkbox" class="media-checkbox" data-index="${index}">
-            <img class="media-preview" src="${item.src || item.url}" alt="${item.alt || '媒体文件'}" 
-                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNiAxNkgyNFYyNEgxNlYxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">
-            <div class="media-info">
-                <div class="media-name" title="${item.name || item.src || item.url}">${this.getFileName(item.src || item.url)}</div>
-                <div class="media-details">${this.getFileSize(item.size)} • ${this.getMediaTypeName(type)}</div>
-            </div>
-            <div class="media-actions">
-                <button class="media-action-btn preview-btn" data-url="${item.src || item.url}" title="预览">👁️</button>
-                <button class="media-action-btn download-btn" data-url="${item.src || item.url}" title="下载">⬇️</button>
-                <button class="media-action-btn copy-btn" data-url="${item.src || item.url}" title="复制链接">📋</button>
-            </div>
-        `;
-        
-        // 添加图片错误处理
-        const img = div.querySelector('.media-preview');
-        img.addEventListener('error', function() {
-            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNiAxNkgyNFYyNEgxNlYxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-        });
-        
-        // 添加按钮事件监听器
-        const previewBtn = div.querySelector('.preview-btn');
-        const downloadBtn = div.querySelector('.download-btn');
-        const copyBtn = div.querySelector('.copy-btn');
-        
-        previewBtn.addEventListener('click', () => {
-            this.previewMedia(previewBtn.dataset.url);
-        });
-        
-        downloadBtn.addEventListener('click', () => {
-            this.downloadMedia(downloadBtn.dataset.url);
-        });
-        
-        copyBtn.addEventListener('click', () => {
-            this.copyMediaUrl(copyBtn.dataset.url);
-        });
-        
-        return div;
-    }
-    
-    /**
-     * 保存设置
-     */
-    async saveSettings() {
-        await chrome.storage.sync.set({ websiteToolsSettings: this.settings });
-    }
-    
-    /**
-     * 显示状态
-     */
-    showStatus(message, type = 'success') {
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.getElementById('statusDot');
-        
-        if (statusText) {
-            statusText.textContent = message;
-        }
-        
-        if (statusDot) {
-            statusDot.className = 'status-dot';
-            if (type === 'error') {
-                statusDot.style.background = '#ef4444';
-            } else if (type === 'warning') {
-                statusDot.style.background = '#f59e0b';
-            } else {
-                statusDot.style.background = '#10b981';
+    updateStepStatus(stepNumber, type, statusText) {
+        if (stepNumber === 'all') {
+            for (let i = 1; i <= 5; i++) {
+                this.updateSingleStepStatus(i, type, statusText);
             }
+        } else {
+            this.updateSingleStepStatus(stepNumber, type, statusText);
+        }
+    }
+    
+    /**
+     * 更新单个步骤状态
+     */
+    updateSingleStepStatus(stepNumber, type, statusText) {
+        const stepElement = document.getElementById(`step${stepNumber}`);
+        const statusElement = document.getElementById(`step${stepNumber}Status`);
+        
+        if (stepElement) {
+            stepElement.className = `tech-step ${type}`;
         }
         
-        // 3秒后恢复默认状态
-        setTimeout(() => {
-            if (statusText) statusText.textContent = '就绪';
-            if (statusDot) statusDot.style.background = '#10b981';
-        }, 3000);
+        if (statusElement) {
+            statusElement.textContent = statusText;
+        }
     }
     
     /**
@@ -717,248 +446,53 @@ class SidePanelController {
     setButtonSuccess(button) {
         if (!button) return;
         
-        button.classList.add('success');
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<span class="btn-icon">✅</span><span class="btn-text">破解成功</span>';
+        
         setTimeout(() => {
-            button.classList.remove('success');
-        }, 2000);
+            button.innerHTML = originalHtml;
+        }, 3000);
     }
     
     /**
-     * 开始周期性更新
+     * 获取详细错误信息
      */
-    startPeriodicUpdate() {
-        setInterval(() => {
-            this.updateStats();
-        }, 30000); // 每30秒更新一次
-    }
-    
-    /**
-     * 工具函数
-     */
-    getModuleName(module) {
-        const names = {
-            'copyFreedom': '复制自由',
-            'linkManager': '链接管理',
-            'mediaExtractor': '媒体提取'
+    getDetailedErrorMessage(error) {
+        const errorMappings = {
+            'CSS injection failed': 'CSS样式注入失败，页面可能有安全限制',
+            'Script execution blocked': '脚本执行被阻止，页面有严格的内容安全策略',
+            'Permission denied': '权限被拒绝，可能是HTTPS页面的安全限制',
+            'Network error': '网络错误，请检查网络连接',
+            'Timeout': '操作超时，页面响应缓慢',
+            'Clone failed': 'DOM克隆失败，页面结构过于复杂',
+            'Event listener patch failed': '事件监听器补丁失败，页面有特殊保护'
         };
-        return names[module] || module;
-    }
-    
-    getMediaTypeName(type) {
-        const names = {
-            'images': '图片',
-            'videos': '视频',
-            'audio': '音频'
-        };
-        return names[type] || type;
-    }
-    
-    getFileName(url) {
-        try {
-            return new URL(url).pathname.split('/').pop() || '未知文件';
-        } catch {
-            return '未知文件';
-        }
-    }
-    
-    getFileSize(size) {
-        // 处理非数字类型的size
-        if (size === null || size === undefined || size === 'unknown' || typeof size !== 'number' || isNaN(size)) {
-            return '未知大小';
-        }
         
-        // 处理0值
-        if (size === 0) {
-            return '0.0 B';
-        }
-        
-        const units = ['B', 'KB', 'MB', 'GB'];
-        let index = 0;
-        let sizeValue = size;
-        
-        while (sizeValue >= 1024 && index < units.length - 1) {
-            sizeValue /= 1024;
-            index++;
-        }
-        
-        return `${sizeValue.toFixed(1)} ${units[index]}`;
-    }
-    
-    /**
-     * 媒体操作方法
-     */
-    async previewMedia(url) {
-        // 在新标签页中预览
-        chrome.tabs.create({ url: url });
-    }
-    
-    async downloadMedia(url) {
-        try {
-            await chrome.downloads.download({ url: url });
-            this.showStatus('开始下载');
-        } catch (error) {
-            console.error('[侧边栏] 下载失败:', error);
-            this.showStatus('下载失败', 'error');
-        }
-    }
-    
-    async copyMediaUrl(url) {
-        try {
-            await navigator.clipboard.writeText(url);
-            this.showStatus('链接已复制');
-        } catch (error) {
-            console.error('[侧边栏] 复制失败:', error);
-            this.showStatus('复制失败', 'error');
-        }
-    }
-    
-    selectAllMedia() {
-        const checkboxes = document.querySelectorAll('.media-checkbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-    }
-    
-    async downloadSelectedMedia() {
-        const checkboxes = document.querySelectorAll('.media-checkbox:checked');
-        if (checkboxes.length === 0) {
-            this.showStatus('请先选择要下载的文件', 'warning');
-            return;
-        }
-        
-        // 这里可以实现批量下载逻辑
-        this.showStatus(`开始下载${checkboxes.length}个文件`);
-    }
-    
-    clearMediaList() {
-        this.mediaCache = { images: [], videos: [], audio: [] };
-        this.updateMediaList('images');
-        this.updateMediaCounts();
-        this.showStatus('列表已清空');
-    }
-    
-    refreshPage() {
-        if (this.currentTab?.id) {
-            chrome.tabs.reload(this.currentTab.id);
-        }
-    }
-    
-    exportSettings() {
-        const dataStr = JSON.stringify(this.settings, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'website-tools-settings.json';
-        link.click();
-        URL.revokeObjectURL(url);
-        this.showStatus('设置已导出');
-    }
-    
-    importSettings() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    const text = await file.text();
-                    const newSettings = JSON.parse(text);
-                    this.settings = newSettings;
-                    await this.saveSettings();
-                    this.updateSettingsUI();
-                    this.showStatus('设置已导入');
-                } catch (error) {
-                    this.showStatus('导入失败', 'error');
-                }
-            }
-        };
-        input.click();
-    }
-    
-    showHelp() {
-        const helpUrl = chrome.runtime.getURL('docs/user-guide.md');
-        chrome.tabs.create({ url: helpUrl });
-    }
-    
-    /**
-     * 尝试连接Content Script，支持重试和主动注入
-     */
-    async tryConnectWithRetry(maxRetries = 3) {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                console.log(`[侧边栏] 尝试连接Content Script (第${attempt}次)`);
-                
-                // 设置超时时间
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('连接超时')), 2000);
-                });
-                
-                const messagePromise = chrome.tabs.sendMessage(this.currentTab.id, {
-                    type: 'GET_PAGE_INFO'
-                });
-                
-                const response = await Promise.race([messagePromise, timeoutPromise]);
-                console.log('[侧边栏] 连接成功，收到响应:', response);
-                return response;
-                
-            } catch (error) {
-                console.warn(`[侧边栏] 第${attempt}次连接失败:`, error.message);
-                
-                if (attempt === maxRetries) {
-                    // 最后一次尝试失败，尝试主动注入Content Script
-                    console.log('[侧边栏] 所有连接尝试失败，尝试主动注入Content Script');
-                    await this.injectContentScript();
-                    
-                    // 注入后再尝试一次连接
-                    try {
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒让脚本初始化
-                        const response = await chrome.tabs.sendMessage(this.currentTab.id, {
-                            type: 'GET_PAGE_INFO'
-                        });
-                        console.log('[侧边栏] 注入后连接成功:', response);
-                        return response;
-                    } catch (injectError) {
-                        console.error('[侧边栏] 注入后仍然连接失败:', injectError);
-                        throw new Error('无法建立连接，请手动刷新页面');
-                    }
-                } else {
-                    // 等待一段时间后重试
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                }
+        for (const [key, message] of Object.entries(errorMappings)) {
+            if (error.includes(key)) {
+                return message;
             }
         }
+        
+        return `${error}。建议：1. 刷新页面重试 2. 检查页面是否完全加载 3. 尝试强力模式`;
     }
     
     /**
-     * 主动注入Content Script
+     * 刷新页面
      */
-    async injectContentScript() {
+    async refreshPage() {
         try {
-            console.log('[侧边栏] 开始主动注入Content Script');
-            
-            // 检查是否有scripting权限
-            if (!chrome.scripting) {
-                throw new Error('缺少scripting权限');
+            if (this.currentTab?.id) {
+                await chrome.tabs.reload(this.currentTab.id);
+                window.close(); // 关闭侧边栏
             }
-            
-            // 注入主要的Content Script
-            await chrome.scripting.executeScript({
-                target: { tabId: this.currentTab.id },
-                files: ['src/content/main-simple.js']
-            });
-            
-            console.log('[侧边栏] Content Script注入成功');
-            
         } catch (error) {
-            console.error('[侧边栏] 注入Content Script失败:', error);
-            throw error;
+            console.error('[侧边栏] 刷新页面失败:', error);
         }
     }
     
     /**
-     * 带重连机制的消息发送
+     * 发送消息给Content Script（带重试机制）
      */
     async sendMessageWithRetry(message, maxRetries = 2) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -980,32 +514,25 @@ class SidePanelController {
                 console.warn(`[侧边栏] 第${attempt}次消息发送失败:`, error.message);
                 
                 if (attempt === maxRetries) {
-                    // 最后一次尝试失败，尝试重新注入并重试
-                    console.log('[侧边栏] 消息发送失败，尝试重新注入Content Script');
-                    try {
-                        await this.injectContentScript();
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待脚本初始化
-                        
-                        const response = await chrome.tabs.sendMessage(this.currentTab.id, message);
-                        console.log('[侧边栏] 重新注入后消息发送成功:', response);
-                        return response;
-                    } catch (injectError) {
-                        console.error('[侧边栏] 重新注入后仍然失败:', injectError);
-                        throw new Error('无法建立连接，请手动刷新页面');
-                    }
+                    console.error('[侧边栏] 所有重试都失败了');
+                    throw new Error('无法建立连接：' + error.message);
                 } else {
                     // 等待一段时间后重试
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
         }
     }
 }
 
-// 全局实例
-window.sidePanelController = null;
-
 // 当DOM加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    window.sidePanelController = new SidePanelController();
+    new SidePanelController();
+});
+
+// 监听标签页变化，重新初始化
+chrome.tabs?.onActivated?.addListener(() => {
+    setTimeout(() => {
+        location.reload();
+    }, 100);
 }); 

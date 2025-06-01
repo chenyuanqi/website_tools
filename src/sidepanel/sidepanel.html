@@ -28,183 +28,98 @@
 
         <!-- 主要内容区域 -->
         <main class="sidepanel-main">
-            <!-- 功能模块标签 -->
-            <nav class="module-tabs">
-                <button class="tab-btn active" data-module="copyFreedom">
-                    <span class="tab-icon">📋</span>
-                    <span class="tab-label">复制自由</span>
-                </button>
-                <button class="tab-btn" data-module="linkManager">
-                    <span class="tab-icon">🔗</span>
-                    <span class="tab-label">链接管理</span>
-                </button>
-                <button class="tab-btn" data-module="mediaExtractor">
-                    <span class="tab-icon">🎬</span>
-                    <span class="tab-label">媒体提取</span>
-                </button>
-            </nav>
-
-            <!-- 功能模块内容 -->
-            <div class="module-content">
-                <!-- 复制自由模块 -->
-                <section class="module-panel active" id="copyFreedomPanel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">复制限制解除</h2>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="copyFreedomEnabled" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
+            <!-- 复制自由模块 -->
+            <section class="main-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <span class="panel-icon">📋</span>
+                        复制自由
+                    </h2>
+                    <span class="status-indicator" id="copyStatus">未启用</span>
+                </div>
+                
+                <div class="main-content">
+                    <!-- 一键破解按钮区域 -->
+                    <div class="unlock-section">
+                        <button class="unlock-btn primary" id="unlockCopyBtn">
+                            <span class="btn-icon">🔓</span>
+                            <span class="btn-text">一键破解复制限制</span>
+                        </button>
+                        
+                        <div class="unlock-description">
+                            <p>一键破解所有复制限制，采用SuperCopy同等技术栈</p>
+                        </div>
                     </div>
                     
-                    <div class="feature-list">
-                        <div class="feature-item">
-                            <div class="feature-info">
-                                <h3 class="feature-name">文本选择</h3>
-                                <p class="feature-desc">解除网页的文本选择限制</p>
+                    <!-- 状态消息区域 -->
+                    <div class="status-section" id="statusSection" style="display: none;">
+                        <div class="status-message" id="statusMessage">
+                            <div class="status-header">
+                                <span class="status-icon" id="statusIcon">ℹ️</span>
+                                <span class="status-title" id="statusTitle">状态信息</span>
                             </div>
-                            <div class="feature-controls">
-                                <label class="toggle-switch small">
-                                    <input type="checkbox" id="textSelectionEnabled" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                                <button class="action-btn" id="enableTextSelectionBtn">
-                                    <span class="btn-icon">✂️</span>
-                                    立即启用
-                                </button>
+                            <div class="status-details" id="statusDetails">
+                                准备就绪
                             </div>
                         </div>
-
-                        <div class="feature-item">
-                            <div class="feature-info">
-                                <h3 class="feature-name">右键菜单</h3>
-                                <p class="feature-desc">恢复被禁用的右键菜单</p>
-                            </div>
-                            <div class="feature-controls">
-                                <label class="toggle-switch small">
-                                    <input type="checkbox" id="rightClickEnabled" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                                <button class="action-btn" id="restoreRightClickBtn">
-                                    <span class="btn-icon">🖱️</span>
-                                    立即恢复
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="feature-item">
-                            <div class="feature-info">
-                                <h3 class="feature-name">快捷键</h3>
-                                <p class="feature-desc">恢复复制粘贴等快捷键</p>
-                            </div>
-                            <div class="feature-controls">
-                                <label class="toggle-switch small">
-                                    <input type="checkbox" id="shortcutsEnabled" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                                <button class="action-btn" id="restoreShortcutsBtn">
-                                    <span class="btn-icon">⌨️</span>
-                                    立即恢复
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 链接管理模块 -->
-                <section class="module-panel" id="linkManagerPanel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">链接管理</h2>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="linkManagerEnabled" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
                     </div>
                     
-                    <div class="feature-list">
-                        <div class="feature-item">
-                            <div class="feature-info">
-                                <h3 class="feature-name">新标签页打开</h3>
-                                <p class="feature-desc">外部链接在新标签页打开</p>
+                    <!-- 技术说明区域 -->
+                    <div class="tech-info">
+                        <h3 class="tech-title">🛠️ 破解技术</h3>
+                        <div class="tech-steps">
+                            <div class="tech-step" id="step1">
+                                <span class="step-icon">1</span>
+                                <span class="step-text">CSS层禁制覆盖</span>
+                                <span class="step-status" id="step1Status">待执行</span>
                             </div>
-                            <div class="feature-controls">
-                                <label class="toggle-switch small">
-                                    <input type="checkbox" id="newTabEnabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                            <div class="tech-step" id="step2">
+                                <span class="step-icon">2</span>
+                                <span class="step-text">事件处理器清理</span>
+                                <span class="step-status" id="step2Status">待执行</span>
+                            </div>
+                            <div class="tech-step" id="step3">
+                                <span class="step-icon">3</span>
+                                <span class="step-text">DOM克隆替换</span>
+                                <span class="step-status" id="step3Status">待执行</span>
+                            </div>
+                            <div class="tech-step" id="step4">
+                                <span class="step-icon">4</span>
+                                <span class="step-text">事件监听器拦截</span>
+                                <span class="step-status" id="step4Status">待执行</span>
+                            </div>
+                            <div class="tech-step" id="step5">
+                                <span class="step-icon">5</span>
+                                <span class="step-text">特殊网站处理</span>
+                                <span class="step-status" id="step5Status">待执行</span>
                             </div>
                         </div>
-
-                        <div class="feature-item">
-                            <div class="feature-info">
-                                <h3 class="feature-name">链接预览</h3>
-                                <p class="feature-desc">弹框预览链接内容</p>
-                            </div>
-                            <div class="feature-controls">
-                                <label class="toggle-switch small">
-                                    <input type="checkbox" id="previewEnabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 媒体提取模块 -->
-                <section class="module-panel" id="mediaExtractorPanel">
-                    <div class="panel-header">
-                        <h2 class="panel-title">媒体提取</h2>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="mediaExtractorEnabled" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
                     </div>
                     
-                    <div class="extraction-controls">
-                        <button class="extract-btn" id="extractImagesBtn">
-                            <span class="btn-icon">🖼️</span>
-                            <span class="btn-text">提取图片</span>
-                            <span class="btn-count" id="imageCount">0</span>
-                        </button>
-                        <button class="extract-btn" id="extractVideosBtn">
-                            <span class="btn-icon">🎥</span>
-                            <span class="btn-text">检测视频</span>
-                            <span class="btn-count" id="videoCount">0</span>
-                        </button>
-                        <button class="extract-btn" id="extractAudioBtn">
-                            <span class="btn-icon">🎵</span>
-                            <span class="btn-text">检测音频</span>
-                            <span class="btn-count" id="audioCount">0</span>
-                        </button>
-                    </div>
-
-                    <!-- 媒体列表 -->
-                    <div class="media-list" id="mediaList">
-                        <div class="empty-state" id="emptyState">
-                            <div class="empty-icon">📁</div>
-                            <p class="empty-text">点击上方按钮开始提取媒体文件</p>
+                    <!-- 白名单区域 -->
+                    <div class="whitelist-info">
+                        <h3 class="whitelist-title">📝 自动白名单</h3>
+                        <p class="whitelist-desc">破解成功后将自动添加到白名单，下次访问自动生效</p>
+                        <div class="current-domain">
+                            <span class="domain-label">当前域名：</span>
+                            <span class="domain-value" id="currentDomain">获取中...</span>
                         </div>
                     </div>
-
-                    <!-- 批量操作 -->
-                    <div class="batch-actions" id="batchActions" style="display: none;">
-                        <button class="batch-btn" id="selectAllBtn">全选</button>
-                        <button class="batch-btn" id="downloadSelectedBtn">下载选中</button>
-                        <button class="batch-btn" id="clearListBtn">清空列表</button>
-                    </div>
-                </section>
-            </div>
+                </div>
+            </section>
         </main>
 
         <!-- 页脚状态栏 -->
         <footer class="sidepanel-footer">
             <div class="status-info">
-                <span class="status-text" id="statusText">就绪</span>
-                <span class="status-dot" id="statusDot"></span>
+                <span class="status-label">状态：</span>
+                <span class="status-value" id="pageStatusFooter">就绪</span>
             </div>
             <div class="footer-actions">
-                <button class="footer-btn" id="exportSettingsBtn" title="导出设置">📤</button>
-                <button class="footer-btn" id="importSettingsBtn" title="导入设置">📥</button>
-                <button class="footer-btn" id="helpBtn" title="帮助">❓</button>
+                <button class="footer-btn" id="refreshPageBtn">
+                    <span class="btn-icon">🔄</span>
+                    刷新页面
+                </button>
             </div>
         </footer>
     </div>

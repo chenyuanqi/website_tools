@@ -7,25 +7,21 @@ export default defineConfig({
       manifest: './src/manifest.json',
       watchFilePaths: ['src/**/*'],
       additionalInputs: [
-        'src/content/selection-unlock.js',
-        'src/content/link-rewriter.js', 
-        'src/content/asset-collector.js'
+        'src/background/index.ts',
+        'src/content/selection-unlock.ts',
+        'src/content/link-rewriter.ts', 
+        'src/content/asset-collector.ts'
       ]
     })
   ],
   build: {
     outDir: 'dist',
     rollupOptions: {
-      input: {
-        background: 'src/background/index.ts',
-        popup: 'src/popup/popup.html',
-        sidepanel: 'src/sidepanel/sidepanel.html',
-        options: 'src/options/options.html'
-      },
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]'
+        assetFileNames: '[name].[ext]',
+        format: 'es' // 明确指定ES模块格式
       }
     },
     target: 'es2020',

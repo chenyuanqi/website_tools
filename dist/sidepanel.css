@@ -683,4 +683,398 @@ input:checked + .toggle-slider:before {
     .toggle-slider {
         border: 2px solid #333;
     }
+}
+
+/* 简化版侧边面板样式 */
+
+/* 主面板样式 */
+.main-panel {
+    padding: 20px;
+    height: 100%;
+    overflow-y: auto;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.main-panel .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e1e5e9;
+}
+
+.main-panel .panel-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-icon {
+    font-size: 20px;
+}
+
+/* 状态指示器样式 */
+.status-indicator {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    background: #f1f3f4;
+    color: #5f6368;
+    font-weight: 500;
+}
+
+.status-indicator.success {
+    background: #e8f5e8;
+    color: #137333;
+}
+
+.status-indicator.error {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+.status-indicator.loading {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+/* 解锁按钮区域 */
+.unlock-section {
+    margin-bottom: 24px;
+}
+
+.unlock-btn {
+    width: 100%;
+    padding: 16px 20px;
+    background: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+
+.unlock-btn:hover {
+    background: #3367d6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+}
+
+.unlock-btn:active {
+    transform: translateY(0);
+}
+
+.unlock-btn:disabled {
+    background: #f1f3f4;
+    color: #9aa0a6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.unlock-btn .btn-icon {
+    font-size: 18px;
+}
+
+.unlock-btn .btn-text {
+    font-weight: 500;
+}
+
+/* 按钮加载状态 */
+.unlock-btn.loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.unlock-btn.loading::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+}
+
+.unlock-description {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.unlock-description p {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* 状态消息区域 */
+.status-section {
+    margin-bottom: 24px;
+}
+
+.status-message {
+    background: #f8f9fa;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.status-message.success {
+    background: #e8f5e8;
+    border-color: #c8e6c9;
+}
+
+.status-message.error {
+    background: #fce8e6;
+    border-color: #ffcdd2;
+}
+
+.status-message.info {
+    background: #e3f2fd;
+    border-color: #bbdefb;
+}
+
+.status-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.status-icon {
+    font-size: 16px;
+}
+
+.status-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.status-details {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* 技术说明区域 */
+.tech-info {
+    margin-bottom: 24px;
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.tech-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tech-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tech-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.tech-step.success {
+    background: #e8f5e8;
+}
+
+.tech-step.error {
+    background: #fce8e6;
+}
+
+.tech-step.loading {
+    background: #e3f2fd;
+}
+
+.step-icon {
+    width: 20px;
+    height: 20px;
+    background: #e1e5e9;
+    color: #666;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.tech-step.success .step-icon {
+    background: #4caf50;
+    color: white;
+}
+
+.tech-step.error .step-icon {
+    background: #f44336;
+    color: white;
+}
+
+.tech-step.loading .step-icon {
+    background: #2196f3;
+    color: white;
+}
+
+.step-text {
+    flex: 1;
+    font-size: 13px;
+    color: #333;
+}
+
+.step-status {
+    font-size: 11px;
+    color: #666;
+    padding: 2px 6px;
+    background: #e1e5e9;
+    border-radius: 10px;
+}
+
+.tech-step.success .step-status {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+.tech-step.error .step-status {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+.tech-step.loading .step-status {
+    background: #bbdefb;
+    color: #1565c0;
+}
+
+/* 白名单信息区域 */
+.whitelist-info {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.whitelist-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.whitelist-desc {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.current-domain {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.domain-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.domain-value {
+    font-size: 12px;
+    color: #333;
+    font-family: monospace;
+    background: #e1e5e9;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* 页脚样式优化 */
+.sidepanel-footer {
+    background: white;
+    border-top: 1px solid #e1e5e9;
+    padding: 12px 16px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-label {
+    font-size: 12px;
+    color: #666;
+}
+
+.status-value {
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.footer-btn {
+    background: #f8f9fa;
+    border: 1px solid #e1e5e9;
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.footer-btn:hover {
+    background: #e8f0fe;
+    border-color: #4285f4;
+    color: #4285f4;
 } 

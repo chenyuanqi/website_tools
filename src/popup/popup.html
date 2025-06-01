@@ -23,20 +23,16 @@
                 <div class="feature-header">
                     <span class="feature-icon">📋</span>
                     <h2 class="feature-title">复制自由</h2>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="copyFreedomToggle" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
+                    <span class="status-indicator" id="copyStatus">未启用</span>
                 </div>
                 <div class="feature-actions">
-                    <button class="action-btn" id="enableTextSelection">
-                        <span class="btn-icon">✂️</span>
-                        解除选择限制
+                    <button class="action-btn primary" id="unlockCopyBtn">
+                        <span class="btn-icon">🔓</span>
+                        <span class="btn-text">一键破解</span>
                     </button>
-                    <button class="action-btn" id="restoreRightClick">
-                        <span class="btn-icon">🖱️</span>
-                        恢复右键菜单
-                    </button>
+                </div>
+                <div class="status-message" id="copyStatusMessage" style="display: none;">
+                    <span class="status-text"></span>
                 </div>
             </section>
 

@@ -162,48 +162,216 @@ Object.defineProperty(global, 'chrome', {
   writable: true
 });
 
-// 模拟浏览器环境 - 只添加必要的方法，不修改location
+// 创建更完整的DOM元素Mock
+const createMockElement = (tagName: string = 'div') => {
+  const element = {
+    tagName: tagName.toUpperCase(),
+    nodeType: 1, // Node.ELEMENT_NODE
+    style: {},
+    className: '',
+    _id: '',
+    innerHTML: '',
+    textContent: '',
+    src: '',
+    href: '',
+    alt: '',
+    title: '',
+    width: 0,
+    height: 0,
+    dataset: {},
+    contentEditable: 'false',
+    oncontextmenu: null,
+    onselectstart: null,
+    ondragstart: null,
+    onkeydown: jest.fn(),
+    onkeyup: jest.fn(),
+    onkeypress: jest.fn(),
+    setAttribute: jest.fn(),
+    getAttribute: jest.fn(),
+    removeAttribute: jest.fn(),
+    hasAttribute: jest.fn().mockReturnValue(false),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    appendChild: jest.fn(),
+    removeChild: jest.fn(),
+    cloneNode: jest.fn().mockReturnThis(),
+    replaceWith: jest.fn(),
+    remove: jest.fn(),
+    querySelector: jest.fn(),
+    querySelectorAll: jest.fn().mockReturnValue([]),
+    classList: {
+      add: jest.fn(),
+      remove: jest.fn(),
+      contains: jest.fn().mockReturnValue(false),
+      toggle: jest.fn()
+    }
+  };
+
+  // 使用getter/setter使id属性可以正确赋值和读取
+  Object.defineProperty(element, 'id', {
+    get() {
+      return this._id;
+    },
+    set(value) {
+      this._id = value;
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  return element;
+};
+
+// 模拟MutationObserver
+global.MutationObserver = jest.fn().mockImplementation((callback) => ({
+  observe: jest.fn(),
+  disconnect: jest.fn(),
+  takeRecords: jest.fn().mockReturnValue([])
+}));
+
+// 扩展现有window对象而不是替换
 if (typeof window !== 'undefined') {
-  // 扩展现有window对象
+  // 安全地设置location属性，避免重定义错误
+  try {
+    if (window.location) {
+      // 尝试设置属性，如果失败则跳过
+      try {
+        Object.defineProperty(window.location, 'hostname', {
+          value: 'example.com',
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则使用现有值
+      }
+      
+      try {
+        Object.defineProperty(window.location, 'href', {
+          value: 'https://example.com/test',
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则使用现有值
+      }
+      
+      try {
+        Object.defineProperty(window.location, 'origin', {
+          value: 'https://example.com',
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则使用现有值
+      }
+      
+      try {
+        Object.defineProperty(window.location, 'protocol', {
+          value: 'https:',
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则使用现有值
+      }
+      
+      try {
+        Object.defineProperty(window.location, 'host', {
+          value: 'example.com',
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则使用现有值
+      }
+      
+      try {
+        Object.defineProperty(window.location, 'pathname', {
+          value: '/test',
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则使用现有值
+      }
+      
+      try {
+        Object.defineProperty(window.location, 'reload', {
+          value: jest.fn(),
+          writable: true,
+          configurable: true
+        });
+      } catch (e) {
+        // 如果无法重定义，则跳过
+      }
+    }
+  } catch (e) {
+    // 如果location对象不可访问，则跳过
+  }
+  
   Object.assign(window, {
     getSelection: jest.fn().mockReturnValue({
       toString: jest.fn().mockReturnValue(''),
       removeAllRanges: jest.fn(),
       addRange: jest.fn()
     }),
-    getComputedStyle: jest.fn().mockReturnValue({}),
+    getComputedStyle: jest.fn().mockReturnValue({
+      backgroundImage: 'none',
+      userSelect: 'auto',
+      pointerEvents: 'auto'
+    }),
     requestIdleCallback: jest.fn().mockImplementation((callback) => {
       setTimeout(callback, 0);
       return 1;
     }),
-    cancelIdleCallback: jest.fn()
+    cancelIdleCallback: jest.fn(),
+    scrollTo: jest.fn()
   });
 }
 
-// 模拟DOM API - 扩展现有document对象
+// 扩展现有document对象而不是替换
 if (typeof document !== 'undefined') {
-  // 扩展现有document对象
+  // 扩展现有的body和documentElement，而不是替换
+  if (document.body) {
+    Object.assign(document.body, {
+      contentEditable: 'false',
+      oncontextmenu: null,
+      appendChild: jest.fn(),
+      removeChild: jest.fn(),
+      cloneNode: jest.fn().mockReturnValue(createMockElement('body')),
+      replaceWith: jest.fn()
+    });
+  }
+  
+  if (document.documentElement) {
+    Object.assign(document.documentElement, {
+      cloneNode: jest.fn().mockReturnValue(createMockElement('html')),
+      replaceWith: jest.fn()
+    });
+  }
+  
+  // 扩展document对象
   Object.assign(document, {
+    designMode: 'off',
+    oncontextmenu: null,
     querySelector: jest.fn(),
     querySelectorAll: jest.fn().mockReturnValue([]),
     getElementById: jest.fn(),
     getElementsByClassName: jest.fn().mockReturnValue([]),
     getElementsByTagName: jest.fn().mockReturnValue([]),
-    createElement: jest.fn().mockImplementation((tagName) => ({
-      tagName: tagName.toUpperCase(),
-      style: {},
-      setAttribute: jest.fn(),
-      getAttribute: jest.fn(),
-      removeAttribute: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      appendChild: jest.fn(),
-      removeChild: jest.fn(),
-      cloneNode: jest.fn().mockReturnThis(),
-      replaceWith: jest.fn()
-    })),
-    createTextNode: jest.fn().mockImplementation((text) => ({ textContent: text }))
+    createElement: jest.fn().mockImplementation((tagName) => createMockElement(tagName)),
+    createTextNode: jest.fn().mockImplementation((text) => ({ textContent: text })),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn()
   });
+  
+  // 确保head存在并可用
+  if (document.head) {
+    Object.assign(document.head, {
+      appendChild: jest.fn(),
+      removeChild: jest.fn()
+    });
+  }
 }
 
 // 模拟全局函数
@@ -215,17 +383,41 @@ global.fetch = jest.fn().mockResolvedValue({
 });
 
 // 模拟URL构造函数
-global.URL = jest.fn().mockImplementation((url, base) => ({
-  href: url,
-  origin: 'https://example.com',
-  protocol: 'https:',
-  host: 'example.com',
-  hostname: 'example.com',
-  port: '',
-  pathname: '/',
-  search: '',
-  hash: ''
-}));
+global.URL = jest.fn().mockImplementation((url, base) => {
+  const mockUrl = {
+    href: url,
+    origin: 'https://example.com',
+    protocol: 'https:',
+    host: 'example.com',
+    hostname: 'example.com',
+    port: '',
+    pathname: '/',
+    search: '',
+    hash: ''
+  };
+  
+  // 简单的URL解析
+  if (url.startsWith('http')) {
+    try {
+      const parsed = new (jest.requireActual('url').URL)(url);
+      Object.assign(mockUrl, {
+        href: parsed.href,
+        origin: parsed.origin,
+        protocol: parsed.protocol,
+        host: parsed.host,
+        hostname: parsed.hostname,
+        port: parsed.port,
+        pathname: parsed.pathname,
+        search: parsed.search,
+        hash: parsed.hash
+      });
+    } catch (e) {
+      // 使用默认值
+    }
+  }
+  
+  return mockUrl;
+});
 
 // 模拟Blob构造函数
 global.Blob = jest.fn().mockImplementation((parts, options) => ({
@@ -243,6 +435,18 @@ jest.setTimeout(10000);
 // 清理函数
 afterEach(() => {
   jest.clearAllMocks();
+  
+  // 重置document状态
+  if (typeof document !== 'undefined') {
+    if (document.body) {
+      document.body.contentEditable = 'false';
+    }
+    document.designMode = 'off';
+    document.oncontextmenu = null;
+    if (document.body) {
+      document.body.oncontextmenu = null;
+    }
+  }
 });
 
 // 错误处理
@@ -250,13 +454,5 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
 
-// 抑制控制台警告（可选）
-const originalConsoleWarn = console.warn;
-console.warn = (...args) => {
-  // 过滤掉一些已知的无害警告
-  const message = args.join(' ');
-  if (message.includes('jsdom')) {
-    return;
-  }
-  originalConsoleWarn.apply(console, args);
-}; 
+// 导出工具函数供测试使用
+export { createMockElement }; 

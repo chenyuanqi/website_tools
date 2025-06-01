@@ -63,6 +63,10 @@ export class LinkRewriterModule {
         }
         sendResponse({ success: true });
         break;
+      case 'LINK_SETTINGS_UPDATED':
+        this.updateSettings(data);
+        sendResponse({ success: true });
+        break;
       case 'GET_LINK_STATS':
         sendResponse(this.getLinkStats());
         break;
@@ -86,7 +90,7 @@ export class LinkRewriterModule {
   }
 
   private processLink(link: HTMLAnchorElement): void {
-    if (this.processedLinks.has(link)) return;
+    if (this.processedLinks.has(link) || !link.href) return;
     
     try {
       const url = new URL(link.href);
@@ -95,6 +99,9 @@ export class LinkRewriterModule {
       
       // 标记链接类型
       link.classList.add(isExternal ? 'yuanqi-external-link' : 'yuanqi-internal-link');
+      
+      // 应用自定义规则
+      this.applyCustomRules(link);
       
       // 应用处理逻辑
       switch (action) {
@@ -142,6 +149,30 @@ export class LinkRewriterModule {
     return 'ignore';
   }
 
+  private applyCustomRules(link: HTMLAnchorElement): void {
+    try {
+      const url = new URL(link.href);
+      const rule = this.findMatchingRule(link);
+      
+      if (rule) {
+        link.setAttribute('data-custom-rule', rule.domain);
+      }
+    } catch (error) {
+      // 忽略无效URL
+    }
+  }
+
+  private findMatchingRule(link: HTMLAnchorElement): any {
+    try {
+      const url = new URL(link.href);
+      return this.settings.customRules.find(rule => 
+        url.hostname.includes(rule.domain)
+      );
+    } catch (error) {
+      return null;
+    }
+  }
+
   private setupNewTabLink(link: HTMLAnchorElement, isExternal: boolean): void {
     // 保存原有属性
     if (link.hasAttribute('target')) {
@@ -170,15 +201,23 @@ export class LinkRewriterModule {
   private setupPreviewLink(link: HTMLAnchorElement): void {
     // 添加悬停预览
     link.addEventListener('mouseenter', (e) => {
-      this.showPreview(link.href, e);
+      this.handleMouseEnter(e as MouseEvent, link);
     });
     
     link.addEventListener('mouseleave', () => {
-      this.hidePreview();
+      this.handleMouseLeave();
     });
     
     // 添加预览图标
     this.addPreviewIcon(link);
+  }
+
+  private handleMouseEnter(event: MouseEvent, link: HTMLAnchorElement): void {
+    this.showPreview(link, event.clientX, event.clientY);
+  }
+
+  private handleMouseLeave(): void {
+    this.hidePreview();
   }
 
   private addExternalLinkIcon(link: HTMLAnchorElement): void {
@@ -263,22 +302,27 @@ export class LinkRewriterModule {
     }
   }
 
-  private async showPreview(url: string, event: MouseEvent): Promise<void> {
-    if (!this.previewContainer || this.currentPreviewUrl === url) return;
+  private async showPreview(link: HTMLAnchorElement, x: number, y: number): Promise<void> {
+    if (!this.previewContainer) return;
+    
+    const url = link.href;
+    if (this.currentPreviewUrl === url) return;
     
     this.currentPreviewUrl = url;
     
     // 定位预览窗口
-    const x = Math.min(event.clientX + 10, window.innerWidth - 420);
-    const y = Math.min(event.clientY + 10, window.innerHeight - 320);
+    const posX = Math.min(x + 10, window.innerWidth - 420);
+    const posY = Math.min(y + 10, window.innerHeight - 320);
     
-    this.previewContainer.style.left = `${x}px`;
-    this.previewContainer.style.top = `${y}px`;
+    this.previewContainer.style.left = `${posX}px`;
+    this.previewContainer.style.top = `${posY}px`;
     this.previewContainer.style.display = 'block';
     
     // 清空之前的内容
     const content = this.previewContainer.querySelector('.preview-content')!;
-    content.innerHTML = '<div class="preview-loader">加载中...</div>';
+    if (content) {
+      content.innerHTML = '<div class="preview-loader">加载中...</div>';
+    }
     
     try {
       // 使用轻量方案：第三方文本提取API
@@ -318,33 +362,37 @@ export class LinkRewriterModule {
     if (!this.previewContainer) return;
     
     const content = this.previewContainer.querySelector('.preview-content')!;
-    content.innerHTML = `
-      <div style="padding: 16px;">
-        <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">
-          ${data.title || '无标题'}
-        </h3>
-        <p style="margin: 0 0 12px 0; font-size: 14px; color: #666; line-height: 1.4;">
-          ${data.description || '无描述'}
-        </p>
-        <div style="font-size: 12px; color: #999;">
-          ${data.url || this.currentPreviewUrl}
+    if (content) {
+      content.innerHTML = `
+        <div style="padding: 16px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">
+            ${data.title || '无标题'}
+          </h3>
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #666; line-height: 1.4;">
+            ${data.description || '无描述'}
+          </p>
+          <div style="font-size: 12px; color: #999;">
+            ${data.url || this.currentPreviewUrl}
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
   }
 
   private renderPreviewError(): void {
     if (!this.previewContainer) return;
     
     const content = this.previewContainer.querySelector('.preview-content')!;
-    content.innerHTML = `
-      <div style="padding: 16px; text-align: center; color: #999;">
-        <div>预览不可用</div>
-        <div style="font-size: 12px; margin-top: 8px;">
-          ${this.currentPreviewUrl}
+    if (content) {
+      content.innerHTML = `
+        <div style="padding: 16px; text-align: center; color: #999;">
+          <div>预览不可用</div>
+          <div style="font-size: 12px; margin-top: 8px;">
+            ${this.currentPreviewUrl}
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
   }
 
   private cleanupLink(link: HTMLAnchorElement): void {
@@ -367,36 +415,48 @@ export class LinkRewriterModule {
     link.classList.remove('yuanqi-external-link', 'yuanqi-internal-link');
     link.querySelector('.yuanqi-external-icon')?.remove();
     link.querySelector('.yuanqi-preview-icon')?.remove();
+    link.removeAttribute('data-custom-rule');
   }
 
   private startMutationObserver(): void {
     this.mutationObserver = new MutationObserver((mutations) => {
       // 节流处理
-      requestIdleCallback(() => {
-        mutations.forEach(mutation => {
-          if (mutation.type === 'childList') {
-            mutation.addedNodes.forEach(node => {
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                const element = node as Element;
-                
-                // 处理新添加的链接
-                if (element.tagName === 'A' && (element as HTMLAnchorElement).href) {
-                  this.processLink(element as HTMLAnchorElement);
-                } else {
-                  // 处理包含链接的元素
-                  const links = element.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>;
-                  links.forEach(link => this.processLink(link));
-                }
-              }
-            });
-          }
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          this.processMutations(mutations);
         });
-      });
+      } else {
+        // 降级处理
+        setTimeout(() => {
+          this.processMutations(mutations);
+        }, 0);
+      }
     });
     
     this.mutationObserver.observe(document.body, {
       childList: true,
       subtree: true
+    });
+  }
+
+  private processMutations(mutations: MutationRecord[]): void {
+    mutations.forEach(mutation => {
+      if (mutation.type === 'childList') {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as Element;
+            
+            // 处理新添加的链接
+            if (element.tagName === 'A' && (element as HTMLAnchorElement).href) {
+              this.processLink(element as HTMLAnchorElement);
+            } else {
+              // 处理包含链接的元素
+              const links = element.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>;
+              links.forEach(link => this.processLink(link));
+            }
+          }
+        });
+      }
     });
   }
 

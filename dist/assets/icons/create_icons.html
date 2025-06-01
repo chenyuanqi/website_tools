@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>生成扩展图标</title>
+</head>
+<body>
+    <canvas id="canvas128" width="128" height="128"></canvas>
+    <canvas id="canvas48" width="48" height="48"></canvas>
+    <canvas id="canvas32" width="32" height="32"></canvas>
+    <canvas id="canvas16" width="16" height="16"></canvas>
+    
+    <script>
+        function createIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // 背景渐变
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#4285f4');
+            gradient.addColorStop(1, '#34a853');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // 圆角
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, size * 0.2);
+            ctx.fill();
+            
+            // 重置混合模式
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // 绘制工具图标
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.3}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🔧', size/2, size/2);
+            
+            // 下载图标
+            const link = document.createElement('a');
+            link.download = `icon${size}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // 生成所有尺寸的图标
+        setTimeout(() => {
+            createIcon('canvas128', 128);
+            createIcon('canvas48', 48);
+            createIcon('canvas32', 32);
+            createIcon('canvas16', 16);
+        }, 1000);
+    </script>
+</body>
+</html> 

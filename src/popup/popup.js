@@ -377,11 +377,12 @@ class PopupController {
             chrome.runtime.openOptionsPage();
         });
         
-        // 功能开关
-        document.getElementById('copyFreedomToggle')?.addEventListener('change', (e) => {
-            this.toggleFeature('copyFreedom', e.target.checked);
+        // 一键破解按钮
+        document.getElementById('unlockCopyBtn')?.addEventListener('click', () => {
+            this.unlockCopyRestrictions();
         });
         
+        // 功能开关
         document.getElementById('linkManagerToggle')?.addEventListener('change', (e) => {
             this.toggleFeature('linkManager', e.target.checked);
         });
@@ -389,16 +390,7 @@ class PopupController {
         document.getElementById('mediaExtractorToggle')?.addEventListener('change', (e) => {
             this.toggleFeature('mediaExtractor', e.target.checked);
         });
-        
-        // 复制自由功能按钮
-        document.getElementById('enableTextSelection')?.addEventListener('click', () => {
-            this.enableTextSelection();
-        });
-        
-        document.getElementById('restoreRightClick')?.addEventListener('click', () => {
-            this.restoreRightClick();
-        });
-        
+
         // 链接管理功能按钮
         document.getElementById('newTabMode')?.addEventListener('click', () => {
             this.toggleNewTabMode();
@@ -457,64 +449,6 @@ class PopupController {
         } catch (error) {
             console.error('[弹出窗口] 切换功能失败:', error);
             this.showError('操作失败，请重试');
-        }
-    }
-    
-    /**
-     * 启用文本选择
-     */
-    async enableTextSelection() {
-        try {
-            if (!this.currentTab?.id) {
-                throw new Error('无法获取当前标签页');
-            }
-            
-            const button = document.getElementById('enableTextSelection');
-            this.setButtonLoading(button, true);
-            
-            await chrome.tabs.sendMessage(this.currentTab.id, {
-                type: MESSAGE_TYPES.ENABLE_TEXT_SELECTION,
-                data: { enabled: true }
-            });
-            
-            this.setButtonSuccess(button, '已解除限制');
-            this.showSuccess('文本选择限制已解除！');
-            
-        } catch (error) {
-            console.error('[弹出窗口] 启用文本选择失败:', error);
-            this.showError('操作失败，请确保页面已加载完成');
-        } finally {
-            const button = document.getElementById('enableTextSelection');
-            this.setButtonLoading(button, false);
-        }
-    }
-    
-    /**
-     * 恢复右键菜单
-     */
-    async restoreRightClick() {
-        try {
-            if (!this.currentTab?.id) {
-                throw new Error('无法获取当前标签页');
-            }
-            
-            const button = document.getElementById('restoreRightClick');
-            this.setButtonLoading(button, true);
-            
-            await chrome.tabs.sendMessage(this.currentTab.id, {
-                type: MESSAGE_TYPES.RESTORE_RIGHT_CLICK,
-                data: { enabled: true }
-            });
-            
-            this.setButtonSuccess(button, '已恢复菜单');
-            this.showSuccess('右键菜单已恢复！');
-            
-        } catch (error) {
-            console.error('[弹出窗口] 恢复右键菜单失败:', error);
-            this.showError('操作失败，请重试');
-        } finally {
-            const button = document.getElementById('restoreRightClick');
-            this.setButtonLoading(button, false);
         }
     }
     
@@ -847,6 +781,160 @@ class PopupController {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
+        }
+    }
+    
+    /**
+     * 一键破解复制限制
+     */
+    async unlockCopyRestrictions() {
+        const button = document.getElementById('unlockCopyBtn');
+        const statusIndicator = document.getElementById('copyStatus');
+        const statusMessage = document.getElementById('copyStatusMessage');
+        
+        try {
+            if (!this.currentTab?.id) {
+                throw new Error('无法获取当前标签页');
+            }
+            
+            // 检查是否为特殊页面
+            if (this.isSpecialPage(this.currentTab.url)) {
+                this.showCopyStatus('error', '系统页面', '系统页面无法破解复制限制');
+                return;
+            }
+            
+            // 设置加载状态
+            this.setButtonLoading(button, true);
+            statusIndicator.className = 'status-indicator loading';
+            statusIndicator.textContent = '破解中...';
+            statusMessage.style.display = 'none';
+            
+            // 执行破解
+            const response = await this.sendMessageWithRetry({
+                type: MESSAGE_TYPES.ENABLE_TEXT_SELECTION,
+                data: { 
+                    enabled: true,
+                    mode: 'complete' // 完整破解模式
+                }
+            });
+            
+            if (response && response.success) {
+                // 破解成功
+                this.showCopyStatus('success', '已破解', response.message || '复制限制已成功解除！');
+                button.innerHTML = '<span class="btn-icon">✅</span><span class="btn-text">破解成功</span>';
+                
+                // 保存到白名单
+                await this.addToWhitelist();
+                
+            } else {
+                // 破解失败但有响应
+                const errorMsg = response?.error || response?.message || '破解失败，未知原因';
+                this.showCopyStatus('error', '破解失败', this.getDetailedErrorMessage(errorMsg));
+            }
+            
+        } catch (error) {
+            Logger.error('一键破解失败:', error);
+            
+            // 分析错误类型并提供详细信息
+            let errorType = '连接失败';
+            let errorDetail = '';
+            
+            if (error.message?.includes('Could not establish connection')) {
+                errorType = '页面连接失败';
+                errorDetail = '页面可能还未加载完成，请刷新页面后重试';
+            } else if (error.message?.includes('Script not found')) {
+                errorType = '脚本未就绪';
+                errorDetail = '破解脚本未加载，请刷新页面后重试';
+            } else if (error.message?.includes('Permission denied')) {
+                errorType = '权限不足';
+                errorDetail = '当前页面限制了扩展权限，无法破解';
+            } else if (this.currentTab?.url?.startsWith('chrome://')) {
+                errorType = '系统页面';
+                errorDetail = 'Chrome系统页面无法破解';
+            } else {
+                errorDetail = error.message || '请刷新页面后重试，或检查网络连接';
+            }
+            
+            this.showCopyStatus('error', errorType, errorDetail);
+        } finally {
+            this.setButtonLoading(button, false);
+        }
+    }
+    
+    /**
+     * 显示复制状态
+     */
+    showCopyStatus(type, status, message) {
+        const statusIndicator = document.getElementById('copyStatus');
+        const statusMessage = document.getElementById('copyStatusMessage');
+        const statusText = statusMessage.querySelector('.status-text');
+        
+        // 更新状态指示器
+        statusIndicator.className = `status-indicator ${type}`;
+        statusIndicator.textContent = status;
+        
+        // 显示详细消息
+        if (message) {
+            statusText.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+            
+            // 成功消息3秒后自动隐藏
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 3000);
+            }
+        } else {
+            statusMessage.style.display = 'none';
+        }
+    }
+    
+    /**
+     * 获取详细错误信息
+     */
+    getDetailedErrorMessage(error) {
+        const errorMappings = {
+            'CSS injection failed': 'CSS样式注入失败，页面可能有安全限制',
+            'Script execution blocked': '脚本执行被阻止，页面有严格的内容安全策略',
+            'Permission denied': '权限被拒绝，可能是HTTPS页面的安全限制',
+            'Network error': '网络错误，请检查网络连接',
+            'Timeout': '操作超时，页面响应缓慢',
+            'Clone failed': 'DOM克隆失败，页面结构过于复杂',
+            'Event listener patch failed': '事件监听器补丁失败，页面有特殊保护'
+        };
+        
+        for (const [key, message] of Object.entries(errorMappings)) {
+            if (error.includes(key)) {
+                return message;
+            }
+        }
+        
+        return `${error}。建议：1. 刷新页面重试 2. 检查页面是否完全加载 3. 尝试强力模式`;
+    }
+    
+    /**
+     * 添加到白名单
+     */
+    async addToWhitelist() {
+        try {
+            if (!this.currentTab?.url) return;
+            
+            const url = new URL(this.currentTab.url);
+            const domain = url.hostname;
+            
+            // 获取当前白名单
+            const result = await chrome.storage.sync.get(['copyFreedomWhitelist']);
+            const whitelist = result.copyFreedomWhitelist || [];
+            
+            // 添加到白名单（如果不存在）
+            if (!whitelist.includes(domain)) {
+                whitelist.push(domain);
+                await chrome.storage.sync.set({ copyFreedomWhitelist: whitelist });
+                Logger.log('已添加到白名单:', domain);
+            }
+        } catch (error) {
+            Logger.warn('添加白名单失败:', error);
         }
     }
 }

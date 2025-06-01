@@ -1,17 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "元气助手",
+  "name": "元气助手 - 简化版",
   "version": "1.0.0",
   "description": "聚合日常网页浏览中最常用的实用工具：链接管理、复制限制解除、媒体文件提取等功能",
   
   "permissions": [
-    "activeTab",
     "storage",
-    "contextMenus",
-    "sidePanel",
+    "activeTab",
     "scripting",
-    "downloads",
-    "notifications"
+    "downloads"
   ],
   
   "host_permissions": [
@@ -25,12 +22,9 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "src/content/main-simple.js"
-      ],
-      "css": ["src/content/content.css"],
-      "run_at": "document_end",
-      "all_frames": true
+      "js": ["src/content/main-simple.js"],
+      "run_at": "document_start",
+      "all_frames": false
     }
   ],
   
@@ -60,15 +54,8 @@
   
   "web_accessible_resources": [
     {
-      "resources": [
-        "assets/images/*",
-        "src/content/*.css"
-      ],
+      "resources": ["src/content/*.js", "assets/icons/*.png"],
       "matches": ["<all_urls>"]
     }
-  ],
-  
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src 'self' data: blob:;"
-  }
+  ]
 } 
